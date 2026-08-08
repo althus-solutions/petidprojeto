@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "O agente acabou de trabalhar no projeto PetID. Se houve implementação de código (src/, supabase/), migration, ou conclusão de um Prompt de docs/PROMPTS.md, verifique se docs/memory.md foi atualizado: tabela 'Progresso de implementação' e entrada em 'Changelog de implementação'. Se NÃO foi atualizado e a tarefa foi entrega relevante, responda com followup_message pedindo ao agente para atualizar docs/memory.md agora, seguindo .cursor/rules/memory-log.mdc. Se já foi atualizado ou foi só dúvida/review sem código, não faça nada.",
+        "timeout": 15
+      }
+    ]
+  }
+}

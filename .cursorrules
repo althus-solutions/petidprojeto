@@ -1,0 +1,41 @@
+# PetID — regras para o Cursor
+
+Projeto: Plataforma de Reencontro de Animais Perdidos (PWA + Supabase).
+
+## Documentação (ler antes de implementar)
+
+Toda documentação está em `docs/`:
+
+- `docs/PRD.md` — visão de produto, escopo, status
+- `docs/spec.md` — requisitos funcionais (RF-01 a RF-09)
+- `docs/constitution.md` — princípios não-negociáveis (vence em conflitos)
+- `docs/plan.md` — stack e fases
+- `docs/architecture.md` — componentes e contratos
+- `docs/database.md` — schema e RLS
+- `docs/security.md` — LGPD, auth, endpoints públicos
+- `docs/memory.md` — decisões e pendências (atualizar ao decidir)
+
+## Convenções de código
+
+- TypeScript strict no frontend
+- Tailwind para estilos; seguir padrão visual existente (`brand-*`)
+- Supabase client apenas com `anon` key — nunca `service_role` no frontend
+- Rotas públicas: `/pet/:payload` (perfil do animal — QR/NFC), `/resgate` (sem tag), `/qr/:payload` (legado → `/pet/:payload`) — sem login
+- Rotas autenticadas: `/tutor`, `/orgao`, `/admin` — com guards
+- Configurações de negócio em `configuracoes_sistema`, não hardcoded
+- Consentimento de localização: gravar timestamp + contexto JSONB, não só boolean
+- Endpoints públicos: rate limiting via RPC security definer
+- Migrations incrementais em `supabase/migrations/`
+- Responder ao usuário em português
+
+## Ao tomar decisões
+
+Registrar em `docs/memory.md` se mudar arquitetura, resolver pendência ou divergir do PRD.
+
+## Ao concluir prompts ou entregas
+
+**Obrigatório** antes de encerrar a tarefa (ver `.cursor/rules/memory-log.mdc`):
+
+1. Atualizar tabela **Progresso de implementação** em `docs/memory.md`
+2. Adicionar entrada no **Changelog de implementação**
+3. Sincronizar status em `docs/PRD.md` se o escopo do produto mudou

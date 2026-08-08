@@ -1,0 +1,77 @@
+{
+  "name": "PetID — on_novo_resgate (RF-06)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "petid-matching-job",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "m6-webhook-01",
+      "name": "Webhook matching_jobs / manual",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "petid-matching-job"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "seconds", "secondsInterval": 30 }]
+        }
+      },
+      "id": "m6-cron-02",
+      "name": "Poll 30s",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst record = item.record ?? item.body?.record ?? item;\nconst jobId = record?.id && record?.tipo ? record.id : (item.job_id ?? null);\nreturn [{ json: { job_id: jobId, from_webhook: Boolean(jobId) } }];"
+      },
+      "id": "m6-code-03",
+      "name": "Normalizar job_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/functions/v1/analyze-pet",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.job_id ? { job_id: $json.job_id } : {}) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "m6-http-04",
+      "name": "Edge analyze-pet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 400],
+      "notes": "Claim automático se job_id omitido. Fake provider por padrão (ai_provider.active_provider)."
+    }
+  ],
+  "connections": {
+    "Webhook matching_jobs / manual": {
+      "main": [[{ "node": "Normalizar job_id", "type": "main", "index": 0 }]]
+    },
+    "Poll 30s": {
+      "main": [[{ "node": "Normalizar job_id", "type": "main", "index": 0 }]]
+    },
+    "Normalizar job_id": {
+      "main": [[{ "node": "Edge analyze-pet", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": false }
+}

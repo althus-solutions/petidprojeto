@@ -1,0 +1,22 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (nunca commitar)
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+.next/
+
+# Logs e cache
+*.log
+.cache/
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

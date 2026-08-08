@@ -1,0 +1,40 @@
+# Cursor Rules — Plataforma de Reencontro de Animais Perdidos
+
+Estas regras orientam qualquer geração de código neste projeto. Antes de implementar algo que pareça conflitar com estas regras, pare e pergunte — não assuma exceção silenciosa.
+
+## Contexto obrigatório
+
+Sempre que for gerar código ou tomar decisão de arquitetura, considere como fonte de verdade, nesta ordem:
+1. `constitution.md` — princípios não-negociáveis (segurança, privacidade, escala)
+2. `spec.md` — o que o sistema deve fazer
+3. `plan.md` e `architecture.md` — como construir
+4. `database.md` — schema e regras de RLS
+5. `security.md` — checklist de segurança
+6. `memory.md` — decisões e pendências já registradas
+
+## Regras de código
+
+- **Nunca** escrever query que ignore RLS ou use `service_role` no lado do client/frontend.
+- **Nunca** hardcodar parâmetros de negócio que `database.md` define como configuráveis (raio de matching, score mínimo, dias de retenção). Sempre ler de `configuracoes_sistema`.
+- **Nunca** processar matching de IA de forma síncrona no request do usuário — sempre via fila/n8n.
+- **Nunca** logar foto, localização exata ou contato de tutor em texto plano em logs de aplicação.
+- Toda nova tabela com dado pessoal/sensível **precisa vir com policy de RLS no mesmo commit**, não depois.
+- Toda captura de localização ou foto **precisa vir acompanhada do registro de consentimento** (timestamp + contexto), não apenas um boolean.
+- Endpoints públicos (leitura de QR, registro de resgate anônimo) precisam de rate limiting desde a primeira implementação, não como débito técnico.
+
+## Stack e convenções
+
+- Frontend: React + Vite + Tailwind. Deploy Vercel.
+- Backend/dados: Supabase (Postgres + PostGIS + pgvector + Auth + Storage).
+- Orquestração assíncrona: n8n.
+- IA de visão: Ollama self-hosted — nunca chamar API paga de visão sem justificativa registrada em `memory.md`.
+- WhatsApp: integração oficial via Z-API/ZPro, orquestrada por n8n.
+- Nomenclatura de tabelas/campos em português, consistente com `database.md`.
+
+## Ao divergir da spec
+
+Se a implementação exigir desviar de `spec.md` ou `plan.md` (ex.: limitação técnica descoberta durante o desenvolvimento), registre a divergência e a justificativa em `memory.md` antes de seguir — não silenciosamente.
+
+## Segurança — lembrete rápido
+
+Antes de qualquer PR/commit que toque autenticação, dados pessoais, localização ou pagamento: revisar o checklist de `security.md` seção 7.

@@ -1,0 +1,35 @@
+---
+description: Atualizar docs/memory.md ao concluir prompts ou entregas de código
+alwaysApply: true
+---
+
+# Log obrigatório em memory.md
+
+Ao **concluir** um Prompt de `docs/PROMPTS.md`, uma feature, migration ou refatoração relevante, **antes de encerrar a tarefa** atualize `docs/memory.md`.
+
+## O que registrar
+
+1. **Progresso de implementação** — marque o prompt como `concluído` na tabela.
+2. **Changelog de implementação** — adicione entrada no topo (formato abaixo).
+3. **Decisões tomadas** — se houver decisão nova de arquitetura/negócio.
+4. **Pendências** — marque como resolvida (`~~texto~~`) ou adicione nova pendência.
+
+## Formato do changelog (copiar e preencher)
+
+```markdown
+### YYYY-MM-DD — Prompt N — Título curto
+- **RF:** RF-XX (ou —)
+- **Entregas:** o que foi implementado (bullets)
+- **Arquivos:** migrations, páginas, libs principais
+- **Decisões:** só se houver (senão omitir)
+- **Validação:** como foi testado (ou pendente)
+```
+
+## Quando NÃO registrar
+
+- Correções triviais (typo, formatação)
+- Perguntas apenas informativas sem alteração de código/docs
+
+## Sincronizar
+
+Se o prompt alterar escopo do produto, atualize também a tabela de status em `docs/PRD.md` (seção 4 ou 8).

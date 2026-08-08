@@ -1,0 +1,366 @@
+{
+  "name": "PetID — enviar_notificacao",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "petid-notificacao",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1b2c3d4-webhook-0001",
+      "name": "Webhook Supabase",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "petid-notificacao"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst record = body.record ?? body;\n\nif (!record?.id) {\n  return [{ json: { skip: true, motivo: 'sem_record_id' } }];\n}\n\nif (record.status && record.status !== 'pendente') {\n  return [{ json: { skip: true, motivo: 'status_nao_pendente', status: record.status } }];\n}\n\nreturn [{ json: { notificacao_id: record.id, skip: false } }];"
+      },
+      "id": "a1b2c3d4-code-0002",
+      "name": "Extrair notificacao_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-if-0003",
+      "name": "É pendente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/obter_contexto_notificacao_envio",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notificacao_id: $('Extrair notificacao_id').item.json.notificacao_id }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0004",
+      "name": "RPC contexto envio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-ignorar",
+              "leftValue": "={{ $json.ignorar }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-if-0005",
+      "name": "Contexto válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.canal }}",
+                    "rightValue": "whatsapp",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "whatsapp"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.canal }}",
+                    "rightValue": "email",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.canal }}",
+                    "rightValue": "push",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "push"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "a1b2c3d4-switch-0006",
+      "name": "Canal preferido",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.Z_API_INSTANCE_ID }}/token/{{ $env.Z_API_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.Z_API_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.destinatario.telefone_e164, message: $json.mensagem.corpo_texto }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0007",
+      "name": "Z-API WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM || ($json.config && $json.config.email_remetente) || 'PetID <notificacoes@petid.app>', to: [$json.destinatario.email], subject: $json.mensagem.assunto, html: '<p>' + $json.mensagem.corpo_html + '</p>' }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0008",
+      "name": "Resend E-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/functions/v1/send-push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ user_id: $('RPC contexto envio').item.json.destinatario.user_id, title: $('RPC contexto envio').item.json.mensagem.assunto, body: $('RPC contexto envio').item.json.mensagem.corpo_texto, notificacao_id: $('RPC contexto envio').item.json.notificacao_id }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0009",
+      "name": "Edge Function Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/confirmar_envio_notificacao",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notificacao_id: $('RPC contexto envio').item.json.notificacao_id, p_canal_efetivo: 'whatsapp', p_custo_estimado: $('RPC contexto envio').item.json.custo_estimado_whatsapp_brl, p_detalhes: { provedor: 'z-api', resposta: $json } }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0010",
+      "name": "Confirmar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/confirmar_envio_notificacao",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notificacao_id: $('RPC contexto envio').item.json.notificacao_id, p_canal_efetivo: 'email', p_custo_estimado: 0, p_detalhes: { provedor: 'resend', resposta: $json } }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0011",
+      "name": "Confirmar E-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/confirmar_envio_notificacao",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notificacao_id: $('RPC contexto envio').item.json.notificacao_id, p_canal_efetivo: 'push', p_custo_estimado: 0, p_detalhes: { provedor: 'send-push', resposta: $json } }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0012",
+      "name": "Confirmar Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/registrar_falha_notificacao",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notificacao_id: $('Extrair notificacao_id').item.json.notificacao_id, p_erro: $json.message || $json.error || JSON.stringify($json), p_detalhes: { no: $node.name } }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-http-0013",
+      "name": "Registrar falha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 600],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook Supabase": {
+      "main": [[{ "node": "Extrair notificacao_id", "type": "main", "index": 0 }]]
+    },
+    "Extrair notificacao_id": {
+      "main": [[{ "node": "É pendente?", "type": "main", "index": 0 }]]
+    },
+    "É pendente?": {
+      "main": [
+        [{ "node": "RPC contexto envio", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "RPC contexto envio": {
+      "main": [[{ "node": "Contexto válido?", "type": "main", "index": 0 }]]
+    },
+    "Contexto válido?": {
+      "main": [
+        [{ "node": "Canal preferido", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Canal preferido": {
+      "main": [
+        [{ "node": "Z-API WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Resend E-mail", "type": "main", "index": 0 }],
+        [{ "node": "Edge Function Push", "type": "main", "index": 0 }],
+        [{ "node": "Resend E-mail", "type": "main", "index": 0 }]
+      ]
+    },
+    "Z-API WhatsApp": {
+      "main": [[{ "node": "Confirmar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Resend E-mail": {
+      "main": [[{ "node": "Confirmar E-mail", "type": "main", "index": 0 }]]
+    },
+    "Edge Function Push": {
+      "main": [[{ "node": "Confirmar Push", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [{ "name": "PetID" }],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

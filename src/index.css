@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+@config '../tailwind.config.js';
+
+body {
+  @apply min-h-screen bg-brand-50 font-sans text-brand-dark antialiased;
+}
+
+#root {
+  @apply min-h-screen;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply font-display;
+}
