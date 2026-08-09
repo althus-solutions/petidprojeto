@@ -6,9 +6,10 @@ export function getGeolocation(): Promise<GeolocationPosition> {
     }
 
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
-      timeout: 15000,
-      maximumAge: 60_000,
+      // Alta precisão (GPS) — importante no resgate da tag para o tutor ir ao ponto certo
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 15_000,
     })
   })
 }

@@ -1,5 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import type { CampoFormularioPet, PetFormValues } from '@/types/pet'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import type {
+  CampoFormularioPet,
+  FotoSlot,
+  PetFormValues,
+  PetFotoSlotValue,
+} from '@/types/pet'
+import { FOTO_SLOTS, MAX_PET_FOTO_BYTES, MAX_PET_FOTOS } from '@/types/pet'
+import { validatePetFotoFile } from '@/lib/pets'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 
@@ -8,6 +16,16 @@ interface PetFormProps {
   initialValues?: PetFormValues
   onSubmit: (values: PetFormValues) => Promise<void>
   submitLabel?: string
+  /** create = cadastro; edit = atualiza dados/fotos sem alterar QR/link */
+  mode?: 'create' | 'edit'
+}
+
+function slotTemFoto(slot: PetFotoSlotValue | undefined): boolean {
+  return Boolean(slot?.file instanceof File || slot?.storagePath)
+}
+
+function emptyFotoSlots(): PetFotoSlotValue[] {
+  return FOTO_SLOTS.map((s) => ({ slot: s.slot, file: null, previewUrl: null }))
 }
 
 export function PetForm({
@@ -15,20 +33,53 @@ export function PetForm({
   initialValues = {},
   onSubmit,
   submitLabel = 'Salvar pet',
+  mode = 'create',
 }: PetFormProps) {
-  const [values, setValues] = useState<PetFormValues>(initialValues)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [fileName, setFileName] = useState<string | null>(null)
+  const [values, setValues] = useState<PetFormValues>(() => ({
+    idade_modo: 'estimada',
+    idade_estimada_unidade: 'anos',
+    cores: [],
+    fotos: emptyFotoSlots(),
+    consentimento_fotos: false,
+    ...initialValues,
+  }))
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const fotoSlots = useMemo(() => {
+    const slots = values.fotos
+    if (Array.isArray(slots) && slots.length > 0) {
+      return slots as PetFotoSlotValue[]
+    }
+    return emptyFotoSlots()
+  }, [values.fotos])
+
+  const fotoCampo = useMemo(
+    () => campos.find((c) => c.tipo === 'fotos' || c.tipo === 'foto'),
+    [campos],
+  )
+  const outrosCampos = useMemo(
+    () => campos.filter((c) => c.tipo !== 'fotos' && c.tipo !== 'foto'),
+    [campos],
+  )
+
+  const coresSelecionadas = useMemo(() => {
+    const raw = values.cores
+    return Array.isArray(raw) ? (raw as string[]) : []
+  }, [values.cores])
+
   useEffect(() => {
     return () => {
-      if (preview) URL.revokeObjectURL(preview)
+      for (const slot of fotoSlots) {
+        if (slot.previewUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(slot.previewUrl)
+        }
+      }
     }
-  }, [preview])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup only on unmount
+  }, [])
 
-  function setField(nome: string, valor: string | number | File | null) {
+  function setField(nome: string, valor: PetFormValues[string]) {
     setValues((prev) => ({ ...prev, [nome]: valor }))
   }
 
@@ -36,12 +87,70 @@ export function PetForm({
     return obrigatorio ? `${label} *` : label
   }
 
+  function toggleCor(opcao: string) {
+    setValues((prev) => {
+      const atual = Array.isArray(prev.cores) ? [...(prev.cores as string[])] : []
+      const idx = atual.indexOf(opcao)
+      if (idx >= 0) atual.splice(idx, 1)
+      else atual.push(opcao)
+      const next: PetFormValues = { ...prev, cores: atual }
+      if (!atual.includes('Outro')) next.cor_outro = ''
+      return next
+    })
+  }
+
+  function setFotoSlot(index: number, file: File | null) {
+    setValues((prev) => {
+      const atual = Array.isArray(prev.fotos)
+        ? ([...(prev.fotos as PetFotoSlotValue[])] as PetFotoSlotValue[])
+        : emptyFotoSlots()
+      while (atual.length < MAX_PET_FOTOS) {
+        const slot = FOTO_SLOTS[atual.length]?.slot ?? ('outro' as FotoSlot)
+        atual.push({ slot, file: null, previewUrl: null })
+      }
+
+      const old = atual[index]
+      if (old?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(old.previewUrl)
+      }
+
+      if (file) {
+        try {
+          validatePetFotoFile(file)
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Foto inválida')
+          return prev
+        }
+      }
+
+      atual[index] = {
+        slot: FOTO_SLOTS[index]?.slot ?? old?.slot ?? 'outro',
+        file,
+        previewUrl: file ? URL.createObjectURL(file) : null,
+        storagePath: null,
+      }
+      setError(null)
+      return { ...prev, fotos: atual }
+    })
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
 
     for (const campo of campos) {
-      if (!campo.obrigatorio || campo.tipo === 'foto') continue
+      if (!campo.obrigatorio) continue
+      if (campo.tipo === 'foto' || campo.tipo === 'fotos' || campo.tipo === 'idade') {
+        continue
+      }
+      if (campo.tipo === 'multiselect') {
+        const arr = values[campo.nome]
+        if (!Array.isArray(arr) || arr.length === 0) {
+          setError(`O campo "${campo.label}" é obrigatório.`)
+          return
+        }
+        continue
+      }
       const valor = values[campo.nome]
       if (valor === undefined || valor === null || valor === '') {
         setError(`O campo "${campo.label}" é obrigatório.`)
@@ -49,9 +158,48 @@ export function PetForm({
       }
     }
 
+    const filledFotos = fotoSlots.filter(slotTemFoto)
+    const fotosObrigatorias = campos.some(
+      (c) => (c.tipo === 'fotos' || c.tipo === 'foto') && c.obrigatorio,
+    )
+    if (fotosObrigatorias && filledFotos.length < 1) {
+      setError(
+        mode === 'edit'
+          ? 'Mantenha ao menos 1 foto do pet.'
+          : 'Envie ao menos 1 foto do pet.',
+      )
+      return
+    }
+    if (filledFotos.length > MAX_PET_FOTOS) {
+      setError(`Máximo de ${MAX_PET_FOTOS} fotos.`)
+      return
+    }
+    for (const slot of filledFotos) {
+      if (!(slot.file instanceof File)) continue
+      try {
+        validatePetFotoFile(slot.file)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Foto inválida')
+        return
+      }
+    }
+
+    if (coresSelecionadas.includes('Outro')) {
+      const outro = String(values.cor_outro ?? '').trim()
+      if (!outro) {
+        setError('Descreva a cor em “Outro”.')
+        return
+      }
+    }
+
+    if (!values.consentimento_fotos) {
+      setError('Marque o consentimento para uso das fotos e características.')
+      return
+    }
+
     setLoading(true)
     try {
-      await onSubmit(values)
+      await onSubmit({ ...values, fotos: fotoSlots })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar pet')
     } finally {
@@ -59,59 +207,192 @@ export function PetForm({
     }
   }
 
-  return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
-      {campos.map((campo) => {
-        if (campo.tipo === 'foto') {
-          return (
-            <div key={campo.nome} className="space-y-1.5">
-              <span className="text-[13.5px] font-bold text-brand-dark">
-                {fieldLabel(campo.label, campo.obrigatorio)}
-              </span>
-              <div className="flex items-center gap-3 rounded-input border-[1.5px] border-dashed border-surface-border bg-brand-50 p-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#6C4FE0"
-                    strokeWidth="1.8"
-                    aria-hidden
-                  >
-                    <rect x="3" y="5" width="18" height="14" rx="2" />
-                    <circle cx="12" cy="12" r="3.5" />
-                    <path d="M8 5l1.5-2h5L16 5" />
-                  </svg>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13.5px] font-bold text-brand-dark">
-                    {fileName ?? 'Nenhum arquivo escolhido'}
+  function renderFotosBlock(campo: CampoFormularioPet) {
+    return (
+      <div key={campo.nome} className="space-y-3">
+        <div>
+          <span className="text-[13.5px] font-bold text-brand-dark">
+            {fieldLabel(campo.label || 'Fotos do pet', true)}
+          </span>
+          <p className="mt-1 text-[12.5px] text-gray-500">
+            Mínimo 1, máximo {MAX_PET_FOTOS}. JPG ou PNG, até{' '}
+            {MAX_PET_FOTO_BYTES / (1024 * 1024)}MB cada. Os rótulos são sugestões
+            de enquadramento.
+            {mode === 'edit'
+              ? ' Troque só as fotos que quiser alterar — o QR Code e o link da tag não mudam.'
+              : ''}
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {FOTO_SLOTS.map((meta, index) => {
+            const slot = fotoSlots[index]
+            const hasFoto = slotTemFoto(slot)
+            return (
+              <div
+                key={meta.slot}
+                className="rounded-[14px] border border-dashed border-surface-border bg-[#fbfaff] p-3"
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[12.5px] font-bold text-brand-dark">
+                    {meta.label}
+                    {index === 0 ? ' *' : ''}
                   </p>
-                  <p className="text-xs text-gray-500">JPG ou PNG, até 5MB</p>
+                  {hasFoto && (
+                    <button
+                      type="button"
+                      className="text-[11.5px] font-semibold text-gray-400 hover:text-red-600"
+                      onClick={() => setFotoSlot(index, null)}
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
-                <label className="shrink-0 cursor-pointer rounded-full border-[1.5px] border-brand-500 bg-white px-4 py-2 text-xs font-bold text-brand-500 transition-colors hover:bg-brand-50">
-                  Escolher arquivo
+                {slot?.previewUrl ? (
+                  <img
+                    src={slot.previewUrl}
+                    alt={meta.label}
+                    className="mb-2 h-28 w-full rounded-xl object-contain bg-brand-50"
+                  />
+                ) : (
+                  <div className="mb-2 flex h-28 items-center justify-center rounded-xl bg-brand-50 text-brand-500">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      aria-hidden
+                    >
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <circle cx="12" cy="12" r="3.5" />
+                    </svg>
+                  </div>
+                )}
+                <label className="inline-flex cursor-pointer">
+                  <span className="rounded-full border-[1.5px] border-brand-500 bg-white px-3 py-1.5 text-[12px] font-bold text-brand-500 hover:bg-brand-50">
+                    {hasFoto ? 'Trocar' : 'Escolher'}
+                  </span>
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/png"
                     className="sr-only"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null
-                      setField('foto', file)
-                      setFileName(file?.name ?? null)
-                      if (preview) URL.revokeObjectURL(preview)
-                      setPreview(file ? URL.createObjectURL(file) : null)
-                    }}
+                    onChange={(e) =>
+                      setFotoSlot(index, e.target.files?.[0] ?? null)
+                    }
                   />
                 </label>
               </div>
-              {preview && (
-                <img
-                  src={preview}
-                  alt="Prévia da foto"
-                  className="mt-2 h-40 w-40 rounded-2xl border border-surface-border object-cover"
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  function renderCampo(campo: CampoFormularioPet) {
+        if (campo.tipo === 'multiselect') {
+          const opcoes = campo.opcoes ?? []
+          return (
+            <div key={campo.nome} className="space-y-2">
+              <span className="text-[13.5px] font-bold text-brand-dark">
+                {fieldLabel(campo.label, campo.obrigatorio)}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {opcoes.map((opcao) => {
+                  const active = coresSelecionadas.includes(opcao)
+                  return (
+                    <button
+                      key={opcao}
+                      type="button"
+                      onClick={() => toggleCor(opcao)}
+                      className={[
+                        'rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors',
+                        active
+                          ? 'bg-brand-500 text-white'
+                          : 'border border-surface-border bg-white text-gray-600 hover:border-brand-500 hover:text-brand-500',
+                      ].join(' ')}
+                    >
+                      {opcao}
+                    </button>
+                  )
+                })}
+              </div>
+              {coresSelecionadas.includes('Outro') && (
+                <Input
+                  label="Descreva a outra cor *"
+                  value={String(values.cor_outro ?? '')}
+                  onChange={(e) => setField('cor_outro', e.target.value)}
                 />
+              )}
+            </div>
+          )
+        }
+
+        if (campo.tipo === 'idade') {
+          const modo = String(values.idade_modo ?? 'estimada')
+          return (
+            <div key={campo.nome} className="space-y-3">
+              <span className="text-[13.5px] font-bold text-brand-dark">
+                {fieldLabel(campo.label, campo.obrigatorio)}
+              </span>
+              <div className="flex gap-2">
+                {(
+                  [
+                    ['estimada', 'Idade estimada'],
+                    ['nascimento', 'Data de nascimento'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setField('idade_modo', value)}
+                    className={[
+                      'rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors',
+                      modo === value
+                        ? 'bg-brand-500 text-white'
+                        : 'border border-surface-border bg-white text-gray-600 hover:border-brand-500 hover:text-brand-500',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {modo === 'nascimento' ? (
+                <Input
+                  label="Data de nascimento"
+                  type="date"
+                  value={String(values.data_nascimento ?? '')}
+                  onChange={(e) => setField('data_nascimento', e.target.value)}
+                />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Valor"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={
+                      values.idade_estimada_valor === undefined ||
+                      values.idade_estimada_valor === null
+                        ? ''
+                        : String(values.idade_estimada_valor)
+                    }
+                    onChange={(e) =>
+                      setField('idade_estimada_valor', e.target.value)
+                    }
+                  />
+                  <Select
+                    label="Unidade"
+                    value={String(values.idade_estimada_unidade ?? 'anos')}
+                    onChange={(e) =>
+                      setField('idade_estimada_unidade', e.target.value)
+                    }
+                  >
+                    <option value="anos">Anos</option>
+                    <option value="meses">Meses</option>
+                  </Select>
+                </div>
               )}
             </div>
           )
@@ -166,7 +447,41 @@ export function PetForm({
             required={campo.obrigatorio}
           />
         )
-      })}
+  }
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
+      {renderFotosBlock(
+        fotoCampo ?? {
+          nome: 'fotos',
+          label: 'Fotos do pet',
+          tipo: 'fotos',
+          obrigatorio: true,
+        },
+      )}
+      {outrosCampos.map((campo) => renderCampo(campo))}
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border border-surface-border bg-[#fbfaff] px-4 py-3.5">
+        <input
+          type="checkbox"
+          className="mt-1 accent-brand-500"
+          checked={Boolean(values.consentimento_fotos)}
+          onChange={(e) => setField('consentimento_fotos', e.target.checked)}
+        />
+        <span className="text-[13px] leading-relaxed text-gray-600">
+          Autorizo o uso da(s) foto(s) e características deste pet para fins de
+          identificação e matching automático na plataforma, conforme a{' '}
+          <Link
+            to="/privacidade"
+            className="font-semibold text-brand-500 underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </span>
+      </label>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -178,22 +493,6 @@ export function PetForm({
       >
         {loading ? 'Salvando…' : submitLabel}
       </Button>
-
-      <p className="flex items-center justify-center gap-2 text-center text-xs text-gray-400">
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 8v5M12 16h.01" />
-        </svg>
-        Estes campos são definidos pelo administrador da plataforma.
-      </p>
     </form>
   )
 }

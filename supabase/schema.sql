@@ -30,6 +30,7 @@ create table if not exists public.tutores (
   canal_notificacao_preferido text check (
     canal_notificacao_preferido in ('whatsapp', 'email', 'push')
   ),
+  foto_url text,
   created_at timestamptz not null default now()
 );
 

@@ -73,14 +73,92 @@ export async function getMfaStatus(): Promise<MfaStatus> {
   }
 }
 
+const TUTOR_SELECT_FULL =
+  'id, nome, telefone, email, canal_notificacao_preferido, foto_url, endereco_estado, endereco_cidade, endereco_bairro, endereco_latitude, endereco_longitude'
+
+const TUTOR_SELECT_FOTO =
+  'id, nome, telefone, email, canal_notificacao_preferido, foto_url'
+
+const TUTOR_SELECT_LEGACY =
+  'id, nome, telefone, email, canal_notificacao_preferido'
+
+function mapTutorRow(data: {
+  id: string
+  nome: string
+  telefone: string | null
+  email: string | null
+  canal_notificacao_preferido: TutorProfile['canal_notificacao_preferido']
+  foto_url?: string | null
+  endereco_estado?: string | null
+  endereco_cidade?: string | null
+  endereco_bairro?: string | null
+  endereco_latitude?: number | null
+  endereco_longitude?: number | null
+}): TutorProfile {
+  return {
+    id: data.id,
+    nome: data.nome,
+    telefone: data.telefone,
+    email: data.email,
+    canal_notificacao_preferido: data.canal_notificacao_preferido,
+    foto_url: data.foto_url ?? null,
+    endereco_estado: data.endereco_estado ?? null,
+    endereco_cidade: data.endereco_cidade ?? null,
+    endereco_bairro: data.endereco_bairro ?? null,
+    endereco_latitude:
+      typeof data.endereco_latitude === 'number' ? data.endereco_latitude : null,
+    endereco_longitude:
+      typeof data.endereco_longitude === 'number'
+        ? data.endereco_longitude
+        : null,
+  }
+}
+
+function isMissingColumnError(
+  error: { code?: string; message?: string } | null,
+  columnHint: string,
+) {
+  if (!error) return false
+  const msg = (error.message ?? '').toLowerCase()
+  return error.code === '42703' || msg.includes(columnHint.toLowerCase())
+}
+
 async function loadTutorProfile(userId: string): Promise<TutorProfile | undefined> {
-  const { data } = await supabase
+  const withEndereco = await supabase
     .from('tutores')
-    .select('id, nome, telefone, email, canal_notificacao_preferido')
+    .select(TUTOR_SELECT_FULL)
     .eq('user_id', userId)
     .maybeSingle()
 
-  return data ?? undefined
+  if (!withEndereco.error) {
+    return withEndereco.data ? mapTutorRow(withEndereco.data) : undefined
+  }
+
+  // Migration 026 ainda não aplicada
+  if (isMissingColumnError(withEndereco.error, 'endereco_')) {
+    const withFoto = await supabase
+      .from('tutores')
+      .select(TUTOR_SELECT_FOTO)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!withFoto.error) {
+      return withFoto.data ? mapTutorRow(withFoto.data) : undefined
+    }
+
+    // Migration 017 ainda não aplicada
+    if (isMissingColumnError(withFoto.error, 'foto_url')) {
+      const legacy = await supabase
+        .from('tutores')
+        .select(TUTOR_SELECT_LEGACY)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      return legacy.data ? mapTutorRow(legacy.data) : undefined
+    }
+  }
+
+  return undefined
 }
 
 async function loadOrganizacaoProfile(
@@ -110,20 +188,51 @@ export async function ensureTutorProfile(
   const existing = await loadTutorProfile(user.id)
   if (existing) return existing
 
-  const { data, error } = await supabase
+  const insertPayload = {
+    user_id: user.id,
+    nome: metadata.nome,
+    telefone: metadata.telefone ?? null,
+    email: user.email ?? null,
+    canal_notificacao_preferido: metadata.canal_notificacao_preferido ?? 'email',
+  }
+
+  const withEndereco = await supabase
     .from('tutores')
-    .insert({
-      user_id: user.id,
-      nome: metadata.nome,
-      telefone: metadata.telefone ?? null,
-      email: user.email ?? null,
-      canal_notificacao_preferido: metadata.canal_notificacao_preferido ?? 'email',
-    })
-    .select('id, nome, telefone, email, canal_notificacao_preferido')
+    .insert(insertPayload)
+    .select(TUTOR_SELECT_FULL)
     .single()
 
-  if (error) throw error
-  return data
+  if (!withEndereco.error && withEndereco.data) {
+    return mapTutorRow(withEndereco.data)
+  }
+
+  if (isMissingColumnError(withEndereco.error, 'endereco_')) {
+    const withFoto = await supabase
+      .from('tutores')
+      .insert(insertPayload)
+      .select(TUTOR_SELECT_FOTO)
+      .single()
+
+    if (!withFoto.error && withFoto.data) {
+      return mapTutorRow(withFoto.data)
+    }
+
+    if (isMissingColumnError(withFoto.error, 'foto_url')) {
+      const legacy = await supabase
+        .from('tutores')
+        .insert(insertPayload)
+        .select(TUTOR_SELECT_LEGACY)
+        .single()
+
+      if (legacy.error) throw legacy.error
+      return mapTutorRow(legacy.data)
+    }
+
+    if (withFoto.error) throw withFoto.error
+  }
+
+  if (withEndereco.error) throw withEndereco.error
+  return undefined
 }
 
 export async function ensureOrgaoProfile(

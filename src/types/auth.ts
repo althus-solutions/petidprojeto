@@ -18,6 +18,13 @@ export interface TutorProfile {
   telefone: string | null
   email: string | null
   canal_notificacao_preferido: CanalNotificacao | null
+  foto_url: string | null
+  /** Endereço residencial — privado (só mapa do tutor, nunca no /pet). */
+  endereco_estado?: string | null
+  endereco_cidade?: string | null
+  endereco_bairro?: string | null
+  endereco_latitude?: number | null
+  endereco_longitude?: number | null
 }
 
 export interface OrganizacaoProfile {

@@ -2,14 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ChatWidget } from '@/components/chat/ChatWidget'
+import { reverseGeocode } from '@/lib/geocode'
 import {
   buildWhatsAppUrl,
   fetchPaginaQrConfig,
   fetchPetByQrPayload,
   getGeolocation,
-  getPetPhotoUrl,
+  getPetPhotoUrls,
   mapQrErrorMessage,
   registrarLeituraQr,
+  resolvePetFotoPaths,
 } from '@/lib/qr-read'
 import type {
   PaginaQrConfig,
@@ -49,16 +52,20 @@ export function PetPublicPage() {
 
   const [step, setStep] = useState<PetPublicStep>('loading')
   const [pet, setPet] = useState<PetPublicoQr | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [photoIndex, setPhotoIndex] = useState(0)
   const [config, setConfig] = useState<PaginaQrConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [comLocalizacao, setComLocalizacao] = useState(false)
   const [tutorNotificado, setTutorNotificado] = useState(false)
   const [aceitouTermos, setAceitouTermos] = useState(false)
+  const [compartilharLocalizacao, setCompartilharLocalizacao] = useState(true)
   const [tutorTelefoneWhatsapp, setTutorTelefoneWhatsapp] = useState<
     string | null
   >(null)
+  const [leituraId, setLeituraId] = useState<string | null>(null)
+  const [chatAutoOpen, setChatAutoOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -84,12 +91,20 @@ export function PetPublicPage() {
         setPet(petData)
         setConfig(pageConfig)
 
-        if (petData.foto_path) {
-          const url = await getPetPhotoUrl(petData.foto_path)
-          if (!cancelled) setPhotoUrl(url)
+        const paths = resolvePetFotoPaths(petData)
+        if (paths.length > 0) {
+          const urls = await getPetPhotoUrls(paths)
+          if (!cancelled) {
+            setPhotoUrls(urls)
+            setPhotoIndex(0)
+          }
+        } else if (!cancelled) {
+          setPhotoUrls([])
+          setPhotoIndex(0)
         }
 
-        setStep('profile')
+        // Resgate só quando há ocorrência de perda aberta
+        setStep(petData.ocorrencia_aberta === true ? 'profile' : 'safe')
       } catch (err) {
         if (cancelled) return
         setError(
@@ -110,6 +125,10 @@ export function PetPublicPage() {
   const enviarConfirmacao = useCallback(
     async (consentiuLocalizacao: boolean) => {
       if (!qrPayload || !config) return
+      if (pet?.ocorrencia_aberta !== true) {
+        setError('Este animal não está perdido.')
+        return
+      }
 
       setSubmitting(true)
       setError(null)
@@ -117,24 +136,43 @@ export function PetPublicPage() {
       try {
         let latitude: number | undefined
         let longitude: number | undefined
+        let enderecoTexto: string | null = null
+        let usouLocalizacao = false
 
         if (consentiuLocalizacao) {
-          const position = await getGeolocation()
-          latitude = position.coords.latitude
-          longitude = position.coords.longitude
+          try {
+            const position = await getGeolocation()
+            latitude = position.coords.latitude
+            longitude = position.coords.longitude
+            usouLocalizacao = true
+            try {
+              const rev = await reverseGeocode(latitude, longitude)
+              enderecoTexto = rev?.label ?? null
+            } catch {
+              enderecoTexto = null
+            }
+          } catch {
+            // Navegador negou GPS — confirma resgate sem localização
+            usouLocalizacao = false
+            latitude = undefined
+            longitude = undefined
+          }
         }
 
         const resultado = await registrarLeituraQr({
           qrPayload,
-          consentimentoLocalizacao: consentiuLocalizacao,
+          consentimentoLocalizacao: usouLocalizacao,
           latitude,
           longitude,
+          enderecoTexto,
           versaoTermos: config.versao_termos_consentimento,
         })
 
-        setComLocalizacao(consentiuLocalizacao)
+        setComLocalizacao(usouLocalizacao)
         setTutorNotificado(Boolean(resultado.notificado))
         setTutorTelefoneWhatsapp(resultado.tutor_telefone_whatsapp ?? null)
+        setLeituraId(resultado.leitura_id ?? null)
+        setChatAutoOpen(true)
         setStep('done')
       } catch (err) {
         setError(
@@ -148,7 +186,7 @@ export function PetPublicPage() {
         setSubmitting(false)
       }
     },
-    [config, qrPayload],
+    [config, pet?.ocorrencia_aberta, qrPayload],
   )
 
   if (step === 'loading') {
@@ -175,6 +213,55 @@ export function PetPublicPage() {
             className="inline-flex font-bold text-brand-500 hover:underline"
           >
             Entrar como órgão / ONG →
+          </Link>
+        </Card>
+      </section>
+    )
+  }
+
+  if (step === 'safe' && pet) {
+    const capa = photoUrls[0]
+    return (
+      <section className="mx-auto max-w-[480px]">
+        <Card className="space-y-5 px-8 py-10 text-center">
+          {capa ? (
+            <div className="mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-2xl border-[3px] border-white bg-brand-100 shadow-card">
+              <img
+                src={capa}
+                alt={pet.nome}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="mx-auto flex justify-center">
+              <PawMark />
+            </div>
+          )}
+          <div>
+            <h1 className="font-display text-xl font-extrabold text-brand-dark">
+              {pet.nome}
+            </h1>
+            {(pet.tem_tutor || pet.tutor_nome) && (
+              <p className="mt-1 text-[13px] text-gray-500">
+                Tutor: {pet.tutor_nome ?? 'cadastrado na PetID'}
+              </p>
+            )}
+          </div>
+          <div className="rounded-[14px] bg-[#E7F8EF] px-4 py-4 text-[#1F9D55]">
+            <p className="font-display text-[16px] font-extrabold">
+              Este animal não está perdido
+            </p>
+            <p className="mt-2 text-[13.5px] leading-relaxed">
+              Não há ocorrência de perda aberta para {pet.nome}. Se você
+              encontrou este animal e acredita que ele precisa de ajuda, entre
+              em contato com um órgão ou ONG da região.
+            </p>
+          </div>
+          <Link
+            to="/login"
+            className="inline-flex font-bold text-brand-500 hover:underline"
+          >
+            Entrar na PetID →
           </Link>
         </Card>
       </section>
@@ -224,6 +311,11 @@ export function PetPublicPage() {
               : 'O tutor só é avisado se houver uma ocorrência de perda aberta na plataforma.'}
           </p>
 
+          <p className="text-[13px] leading-relaxed text-gray-500">
+            Use o ícone de chat no canto inferior para falar com o tutor pela
+            PetID.
+          </p>
+
           {whatsappUrl ? (
             <a
               href={whatsappUrl}
@@ -231,19 +323,23 @@ export function PetPublicPage() {
               rel="noopener noreferrer"
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-[26px] py-[13px] text-sm font-bold text-white shadow-btn-primary transition-[transform,box-shadow,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#1EBE57]"
             >
-              Conversar diretamente com o tutor
+              Também pelo WhatsApp
             </a>
-          ) : tutorNotificado ? (
-            <p className="text-[12.5px] leading-relaxed text-gray-400">
-              Este tutor ainda não cadastrou telefone para WhatsApp. O contato
-              segue pela notificação da plataforma.
-            </p>
           ) : null}
 
           <Link to="/login" className="inline-flex font-bold text-brand-500 hover:underline">
             Voltar ao início
           </Link>
         </Card>
+
+        {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
+          <ChatWidget
+            mode="finder"
+            qrPayload={qrPayload}
+            leituraId={leituraId}
+            autoOpen={chatAutoOpen}
+          />
+        )}
       </section>
     )
   }
@@ -258,27 +354,94 @@ export function PetPublicPage() {
   return (
     <section className="mx-auto max-w-[480px]">
       <Card className="overflow-hidden p-0 shadow-soft">
-        <div className="bg-gradient-to-b from-brand-50 to-white px-7 pb-6 pt-8 text-center">
+        <div className="bg-gradient-to-b from-brand-50 to-white px-5 pb-6 pt-6 text-center sm:px-7">
           <div className="mb-4 flex justify-center">
             <PawMark />
           </div>
-          {photoUrl ? (
-            <img
-              src={photoUrl}
-              alt={pet.nome}
-              className="mx-auto h-36 w-36 rounded-full border-[3px] border-white object-cover shadow-card"
-            />
-          ) : (
-            <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-full border-[3px] border-white bg-brand-100 text-brand-500 shadow-card">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M12 14.5c-3.5 0-6.5 2.2-6.5 5.2 0 1.1.9 1.8 2 1.6 1.4-.3 2.9-.5 4.5-.5s3.1.2 4.5.5c1.1.2 2-.5 2-1.6 0-3-3-5.2-6.5-5.2z" />
-                <circle cx="6" cy="9" r="2.2" />
-                <circle cx="18" cy="9" r="2.2" />
-                <circle cx="9.5" cy="5.5" r="2" />
-                <circle cx="14.5" cy="5.5" r="2" />
-              </svg>
-            </div>
-          )}
+
+          <div className="relative mx-auto w-full max-w-[340px]">
+            {photoUrls.length > 0 ? (
+              <>
+                <div className="overflow-hidden rounded-2xl border-[3px] border-white bg-gradient-to-b from-brand-50 to-brand-100/80 shadow-card aspect-[4/5]">
+                  <img
+                    src={photoUrls[photoIndex] ?? photoUrls[0]}
+                    alt={`${pet.nome} — foto ${photoIndex + 1}`}
+                    className="h-full w-full object-contain object-top"
+                  />
+                </div>
+
+                {photoUrls.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Foto anterior"
+                      className="absolute left-2 top-[42%] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-brand-dark shadow-md hover:bg-white"
+                      onClick={() =>
+                        setPhotoIndex((i) =>
+                          i === 0 ? photoUrls.length - 1 : i - 1,
+                        )
+                      }
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                        <path d="M15 18l-6-6 6-6" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Próxima foto"
+                      className="absolute right-2 top-[42%] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-brand-dark shadow-md hover:bg-white"
+                      onClick={() =>
+                        setPhotoIndex((i) =>
+                          i === photoUrls.length - 1 ? 0 : i + 1,
+                        )
+                      }
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </button>
+                    <p className="mt-2 text-center text-[12px] font-semibold text-brand-600">
+                      {photoIndex + 1} / {photoUrls.length}
+                    </p>
+                    <div className="mt-2 flex justify-center gap-2 overflow-x-auto pb-0.5">
+                      {photoUrls.map((url, i) => (
+                        <button
+                          key={`thumb-${i}-${url.slice(-24)}`}
+                          type="button"
+                          aria-label={`Ver foto ${i + 1}`}
+                          aria-current={i === photoIndex}
+                          onClick={() => setPhotoIndex(i)}
+                          className={[
+                            'h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 bg-brand-50 transition-colors',
+                            i === photoIndex
+                              ? 'border-brand-500'
+                              : 'border-white/80 opacity-80 hover:opacity-100',
+                          ].join(' ')}
+                        >
+                          <img
+                            src={url}
+                            alt=""
+                            className="h-full w-full object-cover object-top"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="mx-auto flex aspect-[4/5] w-full max-w-[340px] items-center justify-center rounded-2xl border-[3px] border-white bg-brand-100 text-brand-500 shadow-card">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 14.5c-3.5 0-6.5 2.2-6.5 5.2 0 1.1.9 1.8 2 1.6 1.4-.3 2.9-.5 4.5-.5s3.1.2 4.5.5c1.1.2 2-.5 2-1.6 0-3-3-5.2-6.5-5.2z" />
+                  <circle cx="6" cy="9" r="2.2" />
+                  <circle cx="18" cy="9" r="2.2" />
+                  <circle cx="9.5" cy="5.5" r="2" />
+                  <circle cx="14.5" cy="5.5" r="2" />
+                </svg>
+              </div>
+            )}
+          </div>
+
           <h1 className="mt-5 font-display text-[26px] font-extrabold text-brand-dark">
             {pet.nome}
           </h1>
@@ -295,8 +458,9 @@ export function PetPublicPage() {
                 {pet.tutor_nome ?? 'Tutor cadastrado na PetID'}
               </p>
               <p className="mt-1 text-[12px] text-gray-500">
-                Após confirmar o resgate, você poderá conversar com o tutor pelo
-                WhatsApp, se ele tiver telefone cadastrado.
+                Após confirmar o resgate, fale com o tutor pelo chat da PetID
+                (ícone no canto inferior). WhatsApp fica disponível se houver
+                telefone cadastrado.
               </p>
             </div>
           )}
@@ -319,19 +483,35 @@ export function PetPublicPage() {
             {config.instrucao}
           </p>
 
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] bg-brand-50 px-4 py-3.5">
-            <input
-              type="checkbox"
-              className="mt-0.5 accent-brand-500"
-              checked={aceitouTermos}
-              onChange={(e) => setAceitouTermos(e.target.checked)}
-              disabled={submitting}
-            />
-            <span className="text-[13px] leading-relaxed text-gray-700">
-              Aceito os termos e condições e compartilhar minha localização
-              aproximada para ajudar no reencontro.
-            </span>
-          </label>
+          <div className="space-y-2.5">
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] bg-brand-50 px-4 py-3.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-brand-500"
+                checked={aceitouTermos}
+                onChange={(e) => setAceitouTermos(e.target.checked)}
+                disabled={submitting}
+              />
+              <span className="text-[13px] leading-relaxed text-gray-700">
+                Aceito os termos e condições da PetID para confirmar este
+                resgate. *
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] border border-surface-border bg-[#fbfaff] px-4 py-3.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-brand-500"
+                checked={compartilharLocalizacao}
+                onChange={(e) => setCompartilharLocalizacao(e.target.checked)}
+                disabled={submitting}
+              />
+              <span className="text-[13px] leading-relaxed text-gray-700">
+                {config.texto_consentimento}{' '}
+                <span className="text-gray-400">(opcional, mas ajuda muito)</span>
+              </span>
+            </label>
+          </div>
 
           {error && (
             <p className="rounded-[14px] bg-brand-50 px-4 py-3 text-sm text-brand-700">
@@ -344,12 +524,16 @@ export function PetPublicPage() {
             variant="primary"
             className="w-full py-[15px] text-[15px]"
             disabled={!aceitouTermos || submitting}
-            onClick={() => void enviarConfirmacao(true)}
+            onClick={() => void enviarConfirmacao(compartilharLocalizacao)}
           >
             {submitting ? 'Enviando…' : 'Confirmar Resgate'}
           </Button>
         </div>
       </Card>
+
+      {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
+        <ChatWidget mode="finder" qrPayload={qrPayload} leituraId={leituraId} />
+      )}
     </section>
   )
 }

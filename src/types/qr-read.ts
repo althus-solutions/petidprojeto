@@ -7,9 +7,13 @@ export interface PetPublicoQr {
   cor: string | null
   caracteristicas: string | null
   foto_path: string | null
+  /** Paths no Storage (bucket pets), ordenados — galeria pública. */
+  foto_paths?: string[] | null
   tem_foto: boolean
   tem_tutor?: boolean
   tutor_nome?: string | null
+  /** true só se existir ocorrência de perda com status=aberta */
+  ocorrencia_aberta?: boolean
 }
 
 export interface PaginaQrConfig {
@@ -33,5 +37,6 @@ export interface LeituraQrResultado {
 export type PetPublicStep =
   | 'loading'
   | 'profile'
+  | 'safe'
   | 'done'
   | 'error'

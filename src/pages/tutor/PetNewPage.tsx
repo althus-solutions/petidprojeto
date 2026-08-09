@@ -42,7 +42,7 @@ export function PetNewPage() {
           Cadastrar pet
         </h1>
         <p className="mt-1.5 text-sm text-gray-500">
-          Campos configuráveis pelo painel admin — sem alterar código.
+          Preencha os dados do pet e adicione as fotos para gerar o QR Code.
         </p>
       </div>
 

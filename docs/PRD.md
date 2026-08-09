@@ -21,7 +21,7 @@ O reencontro acontece pelo **Modelo Híbrido** (decisão 24/jul/2026):
 
 | Mecanismo | Descrição |
 |-----------|-----------|
-| **Tag única (QR + NFC)** | Cadastro gera ID único → QR e link NFC apontam para `/pet/{payload}` (perfil público do animal) → aceite de termos + localização → Confirmar Resgate → tela “Tutor foi notificado” + CTA WhatsApp (telefone só após confirmação) |
+| **Tag única (QR + NFC)** | Cadastro gera ID único → QR e link NFC apontam para `/pet/{payload}` (perfil público do animal) → aceite de termos + localização → Confirmar Resgate → chat in-app (FAB) + WhatsApp opcional (telefone só após confirmação) |
 | **Sem identificação** | Órgão/ONG em `/orgao` → **Encontrei um animal** + matching por IA → notifica tutor se score suficiente (`/resgate` público = legado) |
 
 ### 1.1. Problema
@@ -89,7 +89,7 @@ Cada item do PRD original mapeia para um **RF-XX** em [`spec.md`](spec.md). Stat
 | 4.1 | RF-01 | Cadastro de tutor e pets (campos configuráveis) + perfil com multi-telefones | ✅ Implementado (perfil 2026-08-04) |
 | 4.2 | RF-02 | QR + link NFC **únicos** por animal (`/pet/{payload}`) | ✅ Modelo Híbrido (24/jul/2026) |
 | 4.3 | RF-03 | Página pública do pet → Confirmar Resgate → notifica tutor | ✅ Modelo Híbrido |
-| 4.4 | RF-04 | Ocorrência de animal perdido (incl. retroativa) | ✅ Implementado |
+| 4.4 | RF-04 | Ocorrência de animal perdido (incl. retroativa) | ✅ Enriquecida (geocoding + raio + consent) |
 | 4.5 | RF-05 | Registro de animal resgatado/encontrado | ✅ Implementado (CAPTCHA Turnstile no anônimo) |
 | 4.6 | RF-06 | Matching por IA (cor, porte, raça, score, raio) | ✅ Banco (009–010); deploy Edge `analyze-pet` + n8n pendente |
 | 4.7 | RF-07 | Painel de órgãos/ONGs | ✅ Migration 007 aplicada; configurar região de atuação das orgs |

@@ -64,13 +64,13 @@ export function PetDetailPage() {
       <TutorBackLink to="/tutor">Voltar para meus pets</TutorBackLink>
 
       <Card>
-        <div className="flex flex-col gap-6 sm:flex-row">
-          <div className="flex h-40 w-40 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 text-brand-500 sm:h-44 sm:w-44">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <div className="mx-auto flex aspect-[4/5] w-full max-w-[240px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-brand-50 to-brand-100/60 text-brand-500 sm:mx-0 sm:w-52">
             {fotoUrl ? (
               <img
                 src={fotoUrl}
                 alt={animal.nome}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain object-center"
               />
             ) : (
               <PawIcon className="h-14 w-14" />
@@ -78,17 +78,28 @@ export function PetDetailPage() {
           </div>
           <div className="min-w-0 flex-1 space-y-3">
             <div>
-              <h1 className="font-display text-2xl font-extrabold text-brand-dark">
-                {animal.nome}
-              </h1>
-              {animal.especie && (
-                <p className="mt-1 text-sm text-gray-500">
-                  {animal.especie}
-                  {animal.raca ? ` · ${animal.raca}` : ''}
-                </p>
-              )}
-              <div className="mt-2">
-                <Badge>QR ativo</Badge>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="font-display text-2xl font-extrabold text-brand-dark">
+                    {animal.nome}
+                  </h1>
+                  {animal.especie && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      {animal.especie}
+                      {animal.raca ? ` · ${animal.raca}` : ''}
+                    </p>
+                  )}
+                  <div className="mt-2">
+                    <Badge>QR ativo</Badge>
+                  </div>
+                </div>
+                <ButtonLink
+                  to={`/tutor/pets/${animal.id}/editar`}
+                  variant="outline"
+                  size="sm"
+                >
+                  Editar pet
+                </ButtonLink>
               </div>
             </div>
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">

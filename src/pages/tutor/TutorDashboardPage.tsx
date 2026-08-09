@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PushOptIn } from '@/components/notificacoes/PushOptIn'
 import { PetCard } from '@/components/pets/PetCard'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { PawIcon } from '@/components/ui/PawIcon'
@@ -85,28 +84,15 @@ export function TutorDashboardPage() {
             Cadastre animais, gere QR Codes e acompanhe ocorrências.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <ButtonLink to="/tutor/perfil" variant="outline" size="sm">
-            Meu perfil
-          </ButtonLink>
-          <ButtonLink to="/tutor/ocorrencias" variant="outline" size="sm">
-            Ocorrências
-          </ButtonLink>
-          <ButtonLink to="/tutor/matches" variant="outline" size="sm">
-            Possíveis matches
-          </ButtonLink>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/tutor/pets/novo')}
-          >
-            + Novo pet
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={() => navigate('/tutor/pets/novo')}
+        >
+          + Novo pet
+        </Button>
       </div>
-
-      <PushOptIn />
 
       {loading && <p className="text-sm text-gray-500">Carregando…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}

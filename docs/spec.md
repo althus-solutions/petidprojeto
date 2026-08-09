@@ -25,7 +25,7 @@ Pronto para uso na feira pet de 12–14 de agosto de 2026.
 
 ### RF-01 — Cadastro de tutor e pets
 - **Dado que** um visitante cria conta como tutor, **quando** preenche dados de contato, **então** o sistema cria o perfil e libera cadastro de pets.
-- Tutor pode cadastrar múltiplos pets ("Packs"), cada um com: nome, espécie, raça, porte, cor, peso, características, foto(s).
+- Tutor pode cadastrar múltiplos pets ("Packs"), cada um com: nome, espécie, sexo, idade (opcional), castrado (opcional), raça, porte, cores (multi-select), padrão de pelagem, peso, características, **1–4 fotos** (`animal_fotos`) e consentimento LGPD registrado (`consentimento_fotos_em`).
 - Campos do formulário de pet devem ser configuráveis por um painel de administração (sem deploy de código para adicionar campo novo).
 - **Perfil do tutor** (`/tutor/perfil`, separado do cadastro de pet): editar nome, canal preferido de notificação e **múltiplos telefones**; marcar exatamente um como **principal** (notificações WhatsApp e CTA pós-resgate na tag).
 

@@ -11,4 +11,8 @@ export interface TutorPerfilForm {
   nome: string
   canal_notificacao_preferido: CanalNotificacao
   contatos: TutorContato[]
+  /** Nova foto selecionada no formulário (upload no save). */
+  fotoFile?: File | null
+  /** Path atual no Storage, se já existir. */
+  foto_url?: string | null
 }

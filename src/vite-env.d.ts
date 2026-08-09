@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY: string
   readonly VITE_TURNSTILE_SITE_KEY?: string
   readonly VITE_VAPID_PUBLIC_KEY?: string
+  /** Geocoding preciso (número). Geocoding API no Google Cloud. */
+  readonly VITE_GOOGLE_MAPS_API_KEY?: string
 }
 
 interface ImportMeta {

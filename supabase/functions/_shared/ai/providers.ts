@@ -33,12 +33,12 @@ export class FakeAiProvider implements AiProvider {
       },
       attributes: {
         ...emptyAttributes(),
-        especie: { value: hintEsp ?? 'cao', confidence: hintEsp ? 0.9 : 0.55 },
-        porte: { value: hintPorte ?? 'medio', confidence: hintPorte ? 0.85 : 0.5 },
-        cores: { values: ['indefinido'], confidence: 0.3 },
-        raca: { value: null, confidence: 0 },
-        idade_estimada: { value: null, confidence: 0 },
-        sexo: { value: 'indefinido', confidence: 0.2 },
+        especie: { value: hintEsp ?? 'cao', confidence: hintEsp ? 0.9 : 0.72 },
+        porte: { value: hintPorte ?? 'medio', confidence: hintPorte ? 0.85 : 0.68 },
+        cores: { values: ['Caramelo', 'Branco'], confidence: 0.62 },
+        raca: { value: 'SRD', confidence: 0.45 },
+        idade_estimada: { value: 'adulto', confidence: 0.5 },
+        sexo: { value: 'indefinido', confidence: 0.35 },
       },
       confidence: {
         overall: 0.45,

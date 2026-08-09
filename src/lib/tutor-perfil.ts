@@ -2,6 +2,36 @@ import { supabase } from '@/lib/supabase'
 import type { CanalNotificacao } from '@/types/auth'
 import type { TutorContato, TutorPerfilForm } from '@/types/tutor-perfil'
 
+const BUCKET_PETS = 'pets'
+
+export async function uploadTutorPhoto(
+  tutorId: string,
+  file: File,
+): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${tutorId}/perfil/foto.${ext}`
+
+  const { error } = await supabase.storage.from(BUCKET_PETS).upload(path, file, {
+    upsert: true,
+    contentType: file.type || 'image/jpeg',
+  })
+
+  if (error) throw error
+  return path
+}
+
+export async function getTutorPhotoSignedUrl(
+  storagePath: string,
+  expiresIn = 3600,
+): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(BUCKET_PETS)
+    .createSignedUrl(storagePath, expiresIn)
+
+  if (error) return null
+  return data.signedUrl
+}
+
 export async function listTutorContatos(tutorId: string): Promise<TutorContato[]> {
   const { data, error } = await supabase
     .from('tutor_contatos')
@@ -20,8 +50,12 @@ export async function listTutorContatos(tutorId: string): Promise<TutorContato[]
   }))
 }
 
-export async function salvarPerfilTutor(input: TutorPerfilForm): Promise<{
+export async function salvarPerfilTutor(
+  tutorId: string,
+  input: TutorPerfilForm,
+): Promise<{
   contatos: TutorContato[]
+  foto_url: string | null
 }> {
   const contatosPayload = input.contatos
     .map((c) => ({
@@ -40,12 +74,35 @@ export async function salvarPerfilTutor(input: TutorPerfilForm): Promise<{
   if (error) throw error
 
   const result = data as {
+    tutor_id?: string
     contatos?: Array<{
       id: string
       telefone: string
       rotulo: string | null
       principal: boolean
     }>
+  }
+
+  let fotoUrl = input.foto_url ?? null
+
+  if (input.fotoFile) {
+    fotoUrl = await uploadTutorPhoto(tutorId, input.fotoFile)
+    const { error: fotoError } = await supabase
+      .from('tutores')
+      .update({ foto_url: fotoUrl })
+      .eq('id', tutorId)
+
+    if (fotoError) {
+      if (
+        fotoError.code === '42703' ||
+        fotoError.message.toLowerCase().includes('foto_url')
+      ) {
+        throw new Error(
+          'A foto de perfil ainda não está disponível neste ambiente. Aplique a migration 017_tutor_foto_perfil.sql no Supabase.',
+        )
+      }
+      throw fotoError
+    }
   }
 
   return {
@@ -55,6 +112,7 @@ export async function salvarPerfilTutor(input: TutorPerfilForm): Promise<{
       rotulo: c.rotulo,
       principal: c.principal,
     })),
+    foto_url: fotoUrl,
   }
 }
 
@@ -83,6 +141,15 @@ export function mapPerfilError(message: string): string {
 
   if (lower.includes('nome')) {
     return 'Informe um nome com pelo menos 2 caracteres.'
+  }
+
+  if (
+    lower.includes('storage') ||
+    lower.includes('mime') ||
+    lower.includes('payload too large') ||
+    lower.includes('file size')
+  ) {
+    return 'Não foi possível enviar a foto. Use JPG, PNG ou WebP até o tamanho permitido.'
   }
 
   return message || 'Não foi possível salvar o perfil. Tente novamente.'

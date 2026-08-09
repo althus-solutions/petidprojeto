@@ -59,7 +59,7 @@ export function AdminCamposPetPage() {
         </h1>
         <p className="mt-1.5 max-w-[560px] text-sm leading-relaxed text-gray-500">
           RF-01: altere campos sem deploy de código. Tipos suportados: text,
-          number, textarea, select, foto.
+          number, textarea, select, multiselect, idade, foto, fotos.
         </p>
       </div>
 

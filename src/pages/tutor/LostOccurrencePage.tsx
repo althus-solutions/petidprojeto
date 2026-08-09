@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { LostOccurrenceForm } from '@/components/ocorrencias/LostOccurrenceForm'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
 import { ButtonLink } from '@/components/ui/Button'
@@ -13,7 +13,6 @@ import type { Animal } from '@/types/pet'
 export function LostOccurrencePage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
-  const navigate = useNavigate()
   const [animal, setAnimal] = useState<Animal | null>(null)
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaPerdido[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,7 +92,7 @@ export function LostOccurrencePage() {
             <LostOccurrenceForm
               animal={animal}
               onSuccess={() => {
-                navigate('/tutor/ocorrencias', { replace: true })
+                void listOcorrenciasByAnimal(animal.id).then(setOcorrencias)
               }}
             />
           </div>

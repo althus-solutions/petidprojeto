@@ -20,6 +20,7 @@ nome text
 telefone text  -- espelho do contato principal (notificações / WhatsApp)
 email text
 canal_notificacao_preferido text check (in ('whatsapp','email','push'))
+foto_url text  -- path no bucket pets: {tutor_id}/perfil/foto.{ext} (migration 017)
 created_at timestamptz default now()
 ```
 
@@ -42,13 +43,37 @@ nome text
 especie text
 raca text
 porte text
-cor text
+cor text                    -- espelho legível de cores[]
+cores text[]                -- multi-select estruturado (migration 018)
+sexo text check (macho|femea|nao_sei)
+data_nascimento date null
+idade_estimada_valor numeric null
+idade_estimada_unidade text check (meses|anos) null
+castrado text check (sim|nao|nao_sei) null
+padrao_pelagem text check (curto|medio|longo|enrolado|sem_pelo) null
 peso numeric
 caracteristicas text
-foto_url text
+foto_url text               -- capa = animal_fotos.ordem=1
+consentimento_fotos_em timestamptz null
+consentimento_fotos_contexto jsonb null
 qr_payload text unique  -- ID único da tag; URL pública = /pet/{qr_payload} (QR + NFC)
+                        -- IMUTÁVEL após insert (trigger migration 021)
 created_at timestamptz default now()
 ```
+
+### `animal_fotos` (migration 018)
+```
+id uuid pk
+animal_id uuid references animais(id) on delete cascade
+storage_path text           -- bucket pets: {tutor_id}/{animal_id}/{ordem}.ext
+slot text check (corpo|lateral|rosto|marca|outro)
+ordem smallint 1..4 unique por animal
+embedding vector(512)       -- por foto
+analise_visual jsonb
+ia_status text
+created_at timestamptz
+```
+RLS: tutor só CRUD fotos dos próprios animais. Matching: Edge processa todas as fotos; embedding canônico (média) em `animais.embedding`.
 
 ### `organizacoes` (órgãos públicos / ONGs — multi-tenant desde o dia 1)
 ```
@@ -74,12 +99,26 @@ id uuid pk
 animal_id uuid references animais(id)
 tutor_id uuid references tutores(id)
 data_perda date
-localizacao geography(Point, 4326)
-endereco_aproximado text
+horario_perda time null
+horario_desconhecido boolean default true
+localizacao geography(Point, 4326)  -- PostGIS; lat/lng do centroide cidade/bairro
+estado text                         -- UF sigla (025)
+cidade text                         -- lista IBGE por UF (023)
+bairro text                         -- lista OSM/Photon por cidade; sem rua/número
+endereco_aproximado text            -- espelho "Bairro, Cidade"
+fonte_localizacao text check (autocomplete|manual|gps)
+com_identificacao text check (sim|nao|nao_sei)  -- coleira/tag/NFC na perda
+circunstancias text null
+foto_dia_path text null             -- foto opcional “como estava no dia”
+raio_busca_km numeric default 2 check (1|2|5|10)  -- interno (matching); UI não expõe na abertura
+contato_alternativo text null
+consentimento_ocorrencia_em timestamptz
+consentimento_ocorrencia_contexto jsonb
 status text check (in ('aberta','reencontrado','expirada')) default 'aberta'
 retroativa boolean default false
 created_at timestamptz default now()
 ```
+RLS: tutor CRUD próprio; órgão SELECT se `organizacao_cobre_ponto(localizacao)`; matching via RPCs security definer / service_role (não client anon). Migration `022`.
 
 ### `registros_resgate`
 ```
@@ -181,6 +220,14 @@ where status in ('disponivel', 'em_analise')
 ```
 
 > **Staging:** rode dry-run e confira `retencao_execucoes` antes de ligar `agendamento_ativo`.
+
+## 4.1 Chat na plataforma (migration 020)
+
+Tabelas `conversas` (animal + tutor + `finder_fingerprint`) e `mensagens` (autor `tutor`|`finder`).
+
+- Tutor: RLS nas próprias conversas/mensagens; badge via `contar_nao_lidas_tutor`
+- Finder anônimo: sem SELECT direto — RPCs security definer com fingerprint (`abrir_conversa_pet`, `listar_conversas_finder`, `listar_mensagens_finder`, `enviar_mensagem_finder`, `contar_nao_lidas_finder`)
+- UI: FAB canto inferior em `/tutor` e `/pet/:payload`
 
 ## 5.1 Matching por IA (RF-06)
 

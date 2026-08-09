@@ -15,33 +15,55 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: [
+        'favicon.svg',
+        'pwa-192.png',
+        'pwa-512.png',
+        'apple-touch-icon.png',
+      ],
       manifest: {
         name: 'PetID — Reencontro de Animais',
         short_name: 'PetID',
         description:
           'Plataforma de reencontro de animais perdidos via QR Code e matching inteligente.',
-        theme_color: '#0f766e',
-        background_color: '#f0fdfa',
+        theme_color: '#6C4FE0',
+        background_color: '#F3F1FC',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/login',
         lang: 'pt-BR',
+        categories: ['lifestyle', 'utilities'],
         icons: [
+          {
+            src: '/pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
           {
             src: '/favicon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',
           },
-          {
-            src: '/favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
-          },
         ],
+      },
+      devOptions: {
+        // Permite testar instalação/SW em localhost durante o desenvolvimento
+        enabled: true,
       },
       workbox: {
         importScripts: ['/push-handler.js'],

@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import type {
   InputHTMLAttributes,
   ReactNode,
@@ -10,6 +11,8 @@ type InputFieldProps = {
   hint?: string
   error?: string
   className?: string
+  /** Classes do rótulo (ex.: subtítulo menos destacado). */
+  labelClassName?: string
 }
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & InputFieldProps
@@ -30,11 +33,12 @@ function FieldWrapper({
   hint,
   error,
   className = '',
+  labelClassName = 'text-[13.5px] font-bold text-brand-dark',
   children,
 }: InputFieldProps & { children: ReactNode }) {
   return (
     <label className={['block space-y-1.5', className].filter(Boolean).join(' ')}>
-      <span className="text-[13.5px] font-bold text-brand-dark">{label}</span>
+      <span className={labelClassName}>{label}</span>
       {children}
       {hint && !error && (
         <span className="block text-xs text-gray-400">{hint}</span>
@@ -48,19 +52,30 @@ function fieldErrorClass(error?: string) {
   return error ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : ''
 }
 
-export function Input({
-  label,
-  hint,
-  error,
-  className = '',
-  id,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    label,
+    hint,
+    error,
+    className = '',
+    labelClassName,
+    id,
+    ...props
+  },
+  ref,
+) {
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-')
 
   return (
-    <FieldWrapper label={label} hint={hint} error={error} className={className}>
+    <FieldWrapper
+      label={label}
+      hint={hint}
+      error={error}
+      className={className}
+      labelClassName={labelClassName}
+    >
       <input
+        ref={ref}
         id={inputId}
         className={[inputFieldClassName, fieldErrorClass(error)]
           .filter(Boolean)
@@ -69,13 +84,14 @@ export function Input({
       />
     </FieldWrapper>
   )
-}
+})
 
 export function Select({
   label,
   hint,
   error,
   className = '',
+  labelClassName,
   id,
   children,
   ...props
@@ -83,7 +99,13 @@ export function Select({
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, '-')
 
   return (
-    <FieldWrapper label={label} hint={hint} error={error} className={className}>
+    <FieldWrapper
+      label={label}
+      hint={hint}
+      error={error}
+      className={className}
+      labelClassName={labelClassName}
+    >
       <select
         id={selectId}
         className={[inputFieldClassName, fieldErrorClass(error)]

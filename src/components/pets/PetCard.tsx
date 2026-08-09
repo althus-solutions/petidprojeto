@@ -24,7 +24,11 @@ export function PetCard({ animal }: PetCardProps) {
     >
       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-brand-50 text-brand-500">
         {fotoUrl ? (
-          <img src={fotoUrl} alt={animal.nome} className="h-full w-full object-cover" />
+          <img
+            src={fotoUrl}
+            alt={animal.nome}
+            className="h-full w-full object-cover object-top"
+          />
         ) : (
           <PawIcon className="h-7 w-7" />
         )}

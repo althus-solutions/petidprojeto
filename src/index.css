@@ -17,3 +17,111 @@ h5,
 h6 {
   @apply font-display;
 }
+
+/* —— Mapa de ocorrências (pins custom) —— */
+.petid-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(6px);
+}
+
+.petid-map-pin-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.petid-map-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  filter: drop-shadow(0 4px 10px rgba(45, 27, 105, 0.28));
+}
+
+.petid-map-pin__dot {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.petid-map-pin__label {
+  margin-top: 3px;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: Manrope, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.petid-map-pin--home .petid-map-pin__dot {
+  background: #6c4fe0;
+}
+
+.petid-map-pin--home .petid-map-pin__label {
+  background: #2d1b69;
+}
+
+.petid-map-pin--work .petid-map-pin__dot {
+  background: #0ea5e9;
+}
+
+.petid-map-pin--work .petid-map-pin__label {
+  background: #0369a1;
+}
+
+.petid-map-pin--perda .petid-map-pin__dot {
+  background: #9ca3af;
+}
+
+.petid-map-pin--perda .petid-map-pin__label {
+  background: #6b7280;
+}
+
+.petid-map-pin--found .petid-map-pin__dot {
+  background: #12b76a;
+}
+
+.petid-map-pin--found .petid-map-pin__label {
+  background: #027a48;
+}
+
+.petid-map-pin--found::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  margin-left: -18px;
+  border-radius: 999px;
+  background: rgba(18, 183, 106, 0.45);
+  animation: petid-pin-pulse 1.5s ease-out infinite;
+  z-index: 0;
+}
+
+@keyframes petid-pin-pulse {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}

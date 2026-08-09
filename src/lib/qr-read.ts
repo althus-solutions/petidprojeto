@@ -14,7 +14,7 @@ const PAGINA_QR_PADRAO: PaginaQrConfig = {
   mensagem_contato:
     'Ao confirmar o resgate, o tutor será avisado pelo canal que ele configurou (WhatsApp, e-mail ou push).',
   texto_consentimento:
-    'Autorizo compartilhar minha localização aproximada com o tutor deste pet, apenas para facilitar o reencontro.',
+    'Autorizo compartilhar minha localização aproximada com o tutor deste pet, só para facilitar o reencontro.',
   versao_termos_consentimento: '1.0',
 }
 
@@ -52,7 +52,37 @@ export async function fetchPetByQrPayload(
   })
 
   if (error) throw error
-  return data as PetPublicoQr
+
+  const pet = data as PetPublicoQr & { foto_paths?: unknown }
+  pet.foto_paths = normalizeFotoPaths(pet.foto_paths, pet.foto_path ?? null)
+  return pet
+}
+
+/** Normaliza foto_paths vindos do PostgREST/jsonb (array, string JSON, etc.). */
+function normalizeFotoPaths(
+  raw: unknown,
+  fallback: string | null,
+): string[] {
+  let arr: unknown[] = []
+  if (typeof raw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      arr = Array.isArray(parsed) ? parsed : []
+    } catch {
+      arr = []
+    }
+  } else if (Array.isArray(raw)) {
+    arr = raw
+  }
+
+  const paths = arr
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean)
+
+  const unique = [...new Set(paths)]
+  if (unique.length > 0) return unique
+  if (fallback?.trim()) return [fallback.trim()]
+  return []
 }
 
 export async function getPetPhotoUrl(
@@ -62,10 +92,23 @@ export async function getPetPhotoUrl(
 
   const { data, error } = await supabase.storage
     .from('pets')
-    .createSignedUrl(fotoPath, 300)
+    .createSignedUrl(fotoPath, 3600)
 
   if (error) return null
   return data.signedUrl
+}
+
+/** Resolve paths da galeria pública (RPC + fallback capa). */
+export function resolvePetFotoPaths(pet: PetPublicoQr): string[] {
+  return normalizeFotoPaths(pet.foto_paths, pet.foto_path ?? null)
+}
+
+export async function getPetPhotoUrls(
+  fotoPaths: string[],
+): Promise<string[]> {
+  const unique = [...new Set(fotoPaths.map((p) => p.trim()).filter(Boolean))]
+  const urls = await Promise.all(unique.map((path) => getPetPhotoUrl(path)))
+  return urls.filter((u): u is string => Boolean(u))
 }
 
 export async function registrarLeituraQr(params: {
@@ -73,6 +116,8 @@ export async function registrarLeituraQr(params: {
   consentimentoLocalizacao: boolean
   latitude?: number
   longitude?: number
+  /** Endereço obtido por reverse geocode no momento da leitura. */
+  enderecoTexto?: string | null
   versaoTermos: string
 }): Promise<LeituraQrResultado> {
   const contexto = {
@@ -82,6 +127,9 @@ export async function registrarLeituraQr(params: {
     user_agent: navigator.userAgent,
     idioma: navigator.language,
     registrado_em: new Date().toISOString(),
+    endereco_texto: params.consentimentoLocalizacao
+      ? (params.enderecoTexto ?? null)
+      : null,
   }
 
   const { data, error } = await supabase.rpc('registrar_leitura_qr', {

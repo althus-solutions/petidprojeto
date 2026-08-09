@@ -20,8 +20,8 @@
 | 1 | Schema do banco (Supabase) | — | ✅ concluído | 2026-07-06 |
 | 2 | Autenticação e perfis | — | ✅ concluído | 2026-07-06 |
 | 3 | Cadastro tutor/pets + QR Code | RF-01, RF-02 | ✅ **Híbrido** + perfil tutor (`/tutor/perfil`) | 2026-07-06 / 2026-07-24 / 2026-08-04 |
-| 4 | Página pública leitura QR | RF-03 | ✅ **Híbrido** (`/pet` + aceite + WhatsApp pós-confirmação) | 2026-07-07 / 2026-07-24 / 2026-08-04 |
-| 5 | Ocorrência perdido + registro resgate | RF-04, RF-05 | ✅ concluído | 2026-07-07 |
+| 4 | Página pública leitura QR | RF-03 | ✅ **Híbrido** (`/pet` + chat in-app + WhatsApp opcional) | 2026-07-07 / 2026-08-08 |
+| 5 | Ocorrência perdido + registro resgate | RF-04, RF-05 | ✅ **RF-04 enriquecida** (geocoding, raio, consent) | 2026-07-07 / 2026-08-08 |
 | 6 | Pipeline matching IA (n8n + Ollama) | RF-06 | ✅ concluído | 2026-07-08 |
 | 7 | Notificações multicanal | RF-03, RF-06 | ✅ concluído | 2026-07-08 |
 | 8 | Painel órgãos/ONGs | RF-07 | ✅ concluído | 2026-07-08 |
@@ -43,6 +43,237 @@
 ## Changelog de implementação
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
+
+### 2026-08-08 — UX — Ocorrências: pin com nome + sem CTA abrir
+- **RF:** RF-03 / RF-04
+- **Entregas:** removidos botões “Abrir ocorrência — {pet}”; pin verde mostra nome do pet (não “Aqui”); tipagem `declare` corrigida na `031` (reencontro remove ocorrência/pin do mapa e `/pet` volta a “não está perdido”)
+- **Arquivos:** `TutorOcorrenciasPage.tsx`, `OcorrenciasMap.tsx`, `031_registrar_reencontro_tutor.sql`, `index.css`
+- **Ops:** reaplicar `031` se a versão anterior falhou por typo `declarea`
+
+### 2026-08-08 — UX — Bottom nav mobile no painel tutor
+- **RF:** —
+- **Entregas:** topo só logo + avatar; abas **Meus pets** / **Ocorrências** viram ícones na barra inferior; badge de alerta permanece em Ocorrências; chat FAB sobe acima da bottom nav; barras flutuantes com cantos `rounded-[22px]`
+- **Arquivos:** `AppLayout.tsx`, `ChatWidget.tsx`
+
+### 2026-08-08 — Feature — Instalar app (PWA) em Meu perfil
+- **RF:** — (mobile / PWA)
+- **Entregas:** bloco **Baixar o aplicativo** em `/tutor/perfil` sempre visível (mesmo com perfil carregando); botão **Baixar aplicativo** sempre exibido + copiar link; prompt nativo quando disponível; instruções iOS/Android/desktop
+- **Arquivos:** `InstallAppCard.tsx`, `usePwaInstall.ts`, `pwa-install.ts`, `main.tsx`, `vite.config.ts`, `index.html`, `public/pwa-*.png`, `TutorProfilePage.tsx`
+- **Decisões:** MVP mobile = PWA instalável (conforme `plan.md`); Capacitor/lojas fica como evolução pós-feira
+
+### 2026-08-08 — UX — Card de ocorrência mobile (ações à direita)
+- **RF:** RF-04
+- **Entregas:** bloco expandido com foto/info à esquerda; **Pet encontrado** e **Ver pet** empilhados à direita dentro do card; confirmação de reencontro no rodapé do mesmo bloco; lista em coluna única
+- **Arquivos:** `TutorOcorrenciasPage.tsx`
+
+### 2026-08-08 — Feature — Tutor registra reencontro na aba Ocorrências
+- **RF:** RF-04
+- **Entregas:** botão **Pet encontrado** em cada ocorrência aberta; confirmação inline; RPC `registrar_reencontro_tutor` marca `status=reencontrado`, descarta matches sugeridos e encerra chats do animal
+- **Arquivos:** `031_registrar_reencontro_tutor.sql`, `ocorrencias.ts`, `TutorOcorrenciasPage.tsx`
+- **Ops:** aplicar `031` no SQL Editor do Supabase
+
+### 2026-08-08 — Fix — Badge na aba Ocorrências
+- **RF:** RF-03 / RF-04
+- **Entregas:** sinalizador vermelho na aba **Ocorrências** quando há leitura da tag ainda não vista; `ultima_interacao_em` (qualquer leitura, com ou sem GPS); banner na página adapta texto; dismiss limpa o badge
+- **Arquivos:** `030_alerta_leitura_ocorrencias_tutor.sql`, `ocorrencia-alertas.ts`, `AppLayout.tsx`, `TutorOcorrenciasPage.tsx`
+- **Ops:** aplicar `030` no SQL Editor (senão o badge só funciona com leituras que já tinham `ultima_leitura_em`/GPS)
+
+### 2026-08-08 — Fix — Badge do chat ao confirmar resgate
+- **RF:** RF-03
+- **Entregas:** ao enfileirar notificação de leitura QR, abre conversa + mensagem automática do finder; tutor vê o sinalizador vermelho no ícone de chat; polling do tutor a 5s; fallback no `ChatWidget` se a migration ainda não estiver aplicada
+- **Arquivos:** `029_chat_aviso_apos_leitura_qr.sql`, `ChatWidget.tsx`
+- **Ops:** aplicar `029` no SQL Editor do Supabase
+
+### 2026-08-08 — UX — /pet: termos obrigatórios, localização opcional
+- **RF:** RF-03
+- **Entregas:** checkbox de termos libera “Confirmar Resgate”; localização em checkbox separado (opcional, default marcado)
+- **Arquivos:** `PetPublicPage.tsx`, `qr-read.ts` (texto padrão)
+
+### 2026-08-08 — Fix — Galeria /pet + foto sem corte
+- **RF:** RF-03
+- **Entregas:** migration `028` reaplica policy Storage para `animal_fotos` + RPC com todas as fotos; UI `object-contain` 4:5, setas/miniaturas/contador
+- **Arquivos:** `028_pet_publico_galeria_storage.sql`, `PetPublicPage.tsx`, `qr-read.ts`
+- **Ops:** aplicar `028` no SQL Editor (sem isso a galeria continua só com a capa)
+
+### 2026-08-08 — UX — Geocode preciso via Google (sem arrastar pin)
+- **RF:** RF-04
+- **Entregas:** pin não é mais arrastável; `geocodeEnderecoCompleto` usa Google Geocoding se `VITE_GOOGLE_MAPS_API_KEY` (ROOFTOP/RANGE_INTERPOLATED); fallback Photon
+- **Arquivos:** `geocode.ts`, `OcorrenciasMap.tsx`, `TutorEnderecoFields.tsx`, `.env.example`
+- **Ops:** criar chave Google Cloud com Geocoding API e colocar em `.env.local`
+- **Decisões:** OSM/Photon não tem nº na maioria das ruas BR — precisão de porta exige Google (ou similar)
+
+### 2026-08-08 — UX — Mapa: sem pin Perda + pin Você arrastável
+- **RF:** RF-04 / RF-03
+- **Entregas:** removido pin cinza “Perda”; pin arrastável (depois removido em favor do Google)
+- **Arquivos:** `OcorrenciasMap.tsx`, `TutorOcorrenciasPage.tsx`, `geocode.ts`
+
+### 2026-08-08 — UX — CEP auto-preenche endereço do tutor
+- **RF:** RF-04
+- **Entregas:** ViaCEP preenche rua, bairro, cidade e UF; usuário informa só número/complemento
+- **Arquivos:** `localidades-br.ts` (`fetchEnderecoByCep`), `TutorEnderecoFields.tsx`
+
+### 2026-08-08 — UX — Um endereço no perfil (sem tipo)
+- **RF:** RF-04
+- **Entregas:** perfil com um único endereço (rua/número/etc.); pin “Você” no mapa; sem Residência/Trabalho
+- **Arquivos:** `TutorEnderecoFields`, `tutor-enderecos.ts`, `OcorrenciasMap`, `TutorProfilePage`
+
+### 2026-08-08 — UX — Endereços Residência/Trabalho + leitura com endereço
+- **RF:** RF-04 / RF-03
+- **Entregas:**
+  - Tabela `tutor_enderecos` com rua, número, complemento, CEP, UF/cidade/bairro
+  - Pin privado no mapa + pin verde com endereço textual da leitura QR/NFC
+  - Reverse geocode no `/pet` ao confirmar resgate com localização; `leituras_qr.endereco_texto`
+- **Arquivos:** `027_tutor_enderecos_leitura_texto.sql`, `TutorEnderecoFields`, `tutor-enderecos.ts`, `geocode.ts`, mapa/perfil/QR
+- **Ops:** aplicar `026` + `027`
+- **Validação:** pendente após migrations
+- **Obs.:** UI simplificada depois para um endereço só (sem tipo)
+
+### 2026-08-08 — UX — Mapa moderno + endereço privado do tutor
+- **RF:** RF-04 / RF-03
+- **Entregas:**
+  - Endereço residencial no perfil do tutor (UF/cidade/bairro + lat/lng + consentimento) — **privado**, nunca no `/pet`
+  - Mapa com tiles Carto Voyager, pins custom (casa / perda / encontrado piscando)
+  - Aviso ao abrir ocorrências quando há localização compartilhada na tag
+- **Arquivos:** `026_tutor_endereco_mapa.sql`, `TutorProfilePage`, `OcorrenciasMap`, `TutorOcorrenciasPage`, `auth.ts`, `tutor-perfil.ts`, `index.css`
+- **Decisões:** pin da casa só no app autenticado; pin piscante = última `leituras_qr` com GPS após abertura
+- **Ops:** aplicar `026` no SQL Editor
+- **Validação:** pendente no ambiente após migration
+
+### 2026-08-08 — Fix — Geocode Photon (`lang=pt` inválido)
+- **RF:** RF-04
+- **Entregas:** Photon deixou de aceitar `lang=pt` (só default/de/en/fr) — geocode de bairro falhava; corrigido + removida mensagem “Tente outro bairro”
+- **Arquivos:** `localidades-br.ts`, `geocode.ts`, `EstadoCidadeBairroFields.tsx`
+- **Validação:** query “Cidade Edson, Suzano, SP” retorna coords no Photon
+
+### 2026-08-08 — UX — Local da perda: só selects (sem filtro)
+- **RF:** RF-04
+- **Entregas:** removidos contador “N bairro(s)” e bloco “Filtrar ou digitar bairro” / “Confirmar bairro”; seleção só pelo select
+- **Arquivos:** `EstadoCidadeBairroFields.tsx`
+- **Validação:** visual no formulário de perda
+
+### 2026-08-08 — UX — Local da perda: UF → cidade → bairro (listas)
+- **RF:** RF-04
+- **Entregas:** selects em cascata (UF sigla, cidades IBGE, bairros OSM/Photon); coluna `estado`; RPC com `p_estado`
+- **Arquivos:** `025_ocorrencia_estado_uf.sql`, `localidades-br.ts`, `EstadoCidadeBairroFields.tsx`, `LostOccurrenceForm.tsx`
+- **Ops:** aplicar `025` (após 022–024)
+
+### 2026-08-08 — UX — /pet só resgata se ocorrência aberta
+- **RF:** RF-03
+- **Entregas:** `obter_pet_por_qr` retorna `ocorrencia_aberta`; UI mostra “Este animal não está perdido” sem CTA de resgate/chat quando fechada/inexistente
+- **Arquivos:** `024_pet_publico_somente_se_perdido.sql`, `PetPublicPage.tsx`, `types/qr-read.ts`
+- **Ops:** aplicar `024` no SQL Editor
+
+### 2026-08-08 — UX — Ocorrência: cidade/bairro (sem rua) + raio interno
+- **RF:** RF-04
+- **Entregas:** campos `cidade`/`bairro`; UI sem rua/número e sem seletor de raio; geocode por bairro+cidade; raio 2km só no backend
+- **Arquivos:** `023_ocorrencia_cidade_bairro.sql`, `CidadeBairroFields.tsx`, `LostOccurrenceForm.tsx`, `geocode.ts`
+- **Decisões:** alertas de comunidade por bairro/raio ficam para depois da abertura; matching geo continua interno
+- **Ops:** aplicar `022` + `023`
+
+### 2026-08-08 — Feature — Ocorrência de perda enriquecida
+- **RF:** RF-04
+- **Entregas:**
+  - Geocoding → lat/lng em `localizacao` PostGIS; horário; coleira/tag; circunstâncias; foto do dia; contato; consentimento; pós-submit
+  - Migration `022`: novos campos + RPC ampliada; matching usa `raio_busca_km` (default interno)
+- **Arquivos:** `022_ocorrencia_perdido_enriquecida.sql`, `LostOccurrenceForm.tsx`, `geocode.ts`, `ocorrencias.ts`, docs
+- **Decisões:** geocoding via Photon (sem API key)
+- **Ops:** aplicar `022` no SQL Editor
+- **RLS:** auditado — tutor próprio; órgão por região; matching security definer
+
+### 2026-08-08 — Feature — Edição de pet (QR/link imutáveis)
+- **RF:** RF-01
+- **Entregas:**
+  - Rota `/tutor/pets/:id/editar` + botão na tela do pet
+  - `updateAnimal` atualiza dados/fotos sem enviar `qr_payload`
+  - Migration `021`: trigger impede alteração de `qr_payload` no banco
+- **Arquivos:** `PetEditPage.tsx`, `PetForm.tsx`, `pets.ts`, `PetDetailPage.tsx`, `021_qr_payload_imutavel.sql`
+- **Decisões:** tag (QR + NFC) gerada só no cadastro; edição nunca regenera payload
+- **Ops:** aplicar `021_qr_payload_imutavel.sql` no SQL Editor
+
+### 2026-08-08 — Feature — Chat na plataforma (FAB + badge)
+- **RF:** RF-03 (contato pós-leitura)
+- **Entregas:**
+  - Migration `020`: tabelas `conversas`/`mensagens`, RLS tutor, RPCs finder por fingerprint
+  - FAB flutuante com badge de não lidas; painel de lista + thread
+  - Tutor: widget em `AppLayout`; finder: `/pet/:payload` (abre após confirmar resgate)
+- **Arquivos:** `020_chat_plataforma.sql`, `src/lib/chat.ts`, `src/types/chat.ts`, `ChatWidget.tsx`, `AppLayout.tsx`, `PetPublicPage.tsx`, `docs/database.md`
+- **Ops:** aplicar `020_chat_plataforma.sql` no SQL Editor
+- **Validação:** pendente após migration
+
+### 2026-08-08 — UX — Galeria na página pública NFC/QR
+- **RF:** RF-03
+- **Entregas:** foto maior e quadrada em `/pet/:payload`; carrossel com todas as `animal_fotos`; migration `019` (`foto_paths[]` + policy Storage)
+- **Arquivos:** `019_pet_publico_galeria_fotos.sql`, `PetPublicPage.tsx`, `qr-read.ts`, `types/qr-read.ts`
+- **Ops:** aplicar `019` no SQL Editor
+
+### 2026-08-08 — UX — Cadastro de pet sem sugestão IA (MVP)
+- **RF:** RF-01
+- **Entregas:** removidos modal/CTA/Edge de sugestão IA no cadastro; preenchimento manual + fotos no mesmo form
+- **Arquivos:** `PetForm.tsx` (removidos `PetAiSuggestModal`, `pet-ai-suggest.ts`, `suggest-pet-attributes`)
+- **Decisões:** autofill por IA adiado para depois do MVP
+
+### 2026-08-08 — Feature — Cadastro de pet enriquecido (multi-foto + campos)
+- **RF:** RF-01, RF-06
+- **Entregas:**
+  - Migration `018`: colunas sexo/idade/castrado/pelagem/cores/consentimento; tabela `animal_fotos` + RLS; contexto matching com `foto_paths[]`; seed `campos_formulario_pet`
+  - Form: 1–4 fotos com slots, cores multi-select, sexo/idade/castrado/pelagem, checkbox LGPD
+  - Edge `analyze-pet`: processa todas as fotos, embedding por foto + canônico (média)
+  - Rota placeholder `/privacidade`
+- **Arquivos:** `018_pet_cadastro_enriquecido.sql`, `PetForm.tsx`, `pets.ts`, `configuracoes.ts`, `analyze-pet/index.ts`, `PrivacyPolicyPage.tsx`, docs
+- **Ops:** aplicar migration `018` no SQL Editor; redeploy Edge `analyze-pet`
+- **Validação:** pendente após migration
+
+### 2026-08-08 — Fix — Login quebrava sem migration 017
+- **RF:** —
+- **Entregas:** `loadTutorProfile` / `ensureTutorProfile` fazem fallback se `tutores.foto_url` não existir; mensagem clara ao salvar foto sem migration
+- **Arquivos:** `src/lib/auth.ts`, `src/lib/tutor-perfil.ts`
+- **Ops:** ainda é necessário aplicar `017_tutor_foto_perfil.sql` para a foto funcionar
+
+### 2026-08-08 — UX — Removido canal preferido do perfil
+- **RF:** —
+- **Entregas:** campo “Canal preferido de notificação” removido de `/tutor/perfil` (valor atual preservado no save)
+- **Arquivos:** `TutorProfilePage.tsx`
+
+### 2026-08-08 — Feature — Foto do tutor no perfil
+- **RF:** RF-01
+- **Entregas:**
+  - Coluna `tutores.foto_url` (migration `017`)
+  - Upload no bucket `pets` em `{tutor_id}/perfil/foto.*`
+  - UI em `/tutor/perfil` + avatar no ícone da topbar
+- **Arquivos:** `017_tutor_foto_perfil.sql`, `TutorProfilePage.tsx`, `tutor-perfil.ts`, `auth.ts`, `AppLayout.tsx`, `docs/database.md`
+- **Ops:** aplicar migration `017` no SQL Editor do Supabase
+- **Validação:** pendente após migration
+
+### 2026-08-08 — UX — Removido CTA “Possíveis matches” do dashboard
+- **RF:** —
+- **Entregas:** removido botão “Possíveis matches” de `/tutor` (rota `/tutor/matches` permanece)
+- **Arquivos:** `TutorDashboardPage.tsx`
+
+### 2026-08-08 — UX — Ocorrências na topbar do tutor
+- **RF:** RF-04
+- **Entregas:**
+  - Abas na topbar do tutor: **Meus pets** e **Ocorrências**
+  - Removido botão solto “Ocorrências” do dashboard
+- **Arquivos:** `AppLayout.tsx`, `TutorDashboardPage.tsx`
+- **Validação:** pendente visual em `/tutor` e `/tutor/ocorrencias`
+
+### 2026-08-08 — UX — Push só na ocorrência de perdido
+- **RF:** RF-04 / RF-07 (notificações)
+- **Entregas:**
+  - Removido banner `PushOptIn` do dashboard `/tutor`
+  - Opt-in de push aparece ao abrir ocorrência em `/tutor/pets/:id/perdido`
+  - Copy alinhada a alertas com ocorrência aberta (tag/matches)
+- **Arquivos:** `TutorDashboardPage.tsx`, `LostOccurrencePage.tsx`, `PushOptIn.tsx`
+- **Validação:** pendente visual no fluxo “Animal perdido”
+
+### 2026-08-08 — UX — Menu de conta no AppLayout
+- **RF:** —
+- **Entregas:**
+  - Removidos e-mail e link/botão “Meu perfil” do header autenticado
+  - Ícone de perfil com dropdown: **Meu perfil** (tutor) e **Sair**
+  - Removido botão “Meu perfil” da home do tutor (acesso só pelo ícone)
+- **Arquivos:** `src/components/layouts/AppLayout.tsx`, `src/pages/tutor/TutorDashboardPage.tsx`
+- **Validação:** pendente visual em `/tutor`
 
 ### 2026-08-04 — Ops — Porta 5181 ocupada / página em branco (Vite)
 - **RF:** —
@@ -432,6 +663,9 @@
 | 2026-08-04 | Perfil do tutor com múltiplos telefones | `tutor_contatos` + principal espelhado em `tutores.telefone`; UI `/tutor/perfil` |
 | 2026-08-04 | Resgate sem tag = fluxo de órgão/ONG | CTAs públicos removidos; `/resgate` legado |
 | 2026-08-04 | Notificação da tag exige ocorrência aberta | Leitura auditada sempre; `notificado` só com `ocorrencias_perdido.status=aberta` |
+| 2026-08-08 | `qr_payload` imutável após cadastro | Edição de pet não regenera QR/link; tag física permanece válida (trigger 021) |
+| 2026-08-08 | Local da perda = cidade + bairro (sem rua) | Privacidade + base para alertas de comunidade |
+| 2026-08-08 | Raio de matching interno (default 2km) | Tutor não escolhe na abertura; alertas por raio/bairro depois |
 | 2026-07-07 | Documentação reorganizada em `docs/` | PRD consolidado em `docs/PRD.md`; fonte original em `docs/sources/` |
 | 2026-07-07 | **memory.md atualizado automaticamente** via regra Cursor + hook `stop` | Rastreabilidade de cada prompt/entrega sem depender de memória do chat |
 | 2026-07-08 | **Prompt 6 adiado** — ordem 7 → 8 → 9 → 6 enquanto decide stack de IA | QR + notificações reais não dependem de matching IA |
@@ -449,7 +683,7 @@
 | Ownership de `/resgate` (“Encontrei um animal”) | RF-05 | ✅ área `/orgao`; home/nav sem CTA; `/resgate` legado | — |
 | Notificação QR só com ocorrência aberta | RF-03, RF-04 | ✅ migration `016` (aplicar no SQL Editor) | — |
 | QR co-branded (logo patrocinador) | RF-02 | QR genérico `/resgate` funciona; sem overlay de marca | Incluir no MVP da feira ou pós-lançamento? |
-| Múltiplas fotos por pet | RF-01 (`foto(s)`) | Apenas 1 foto por animal | Suportar galeria no cadastro? |
+| ~~Múltiplas fotos por pet~~ | RF-01 | ~~Apenas 1 foto~~ → `animal_fotos` 1–4 (018) | ✅ 2026-08-08 |
 | Monetização / assinatura | PRD §6 | Não implementado | Freemium antes da feira ou depois? |
 
 ## Correções UX em lote (ago/2026)
@@ -466,7 +700,7 @@
 ## Pendências operacionais (pós-migrations — feira ago/2026)
 
 1. **Deploy infra:** Edge `analyze-pet` + `send-push`; workflows n8n; webhook `notificacoes` → n8n; credenciais Z-API/Resend/VAPID.
-2. **Config produção:** `ai_provider.active_provider` fake → ollama; Turnstile chaves reais; definir **região de atuação** das orgs em `/admin/organizacoes`; **usuário admin** `fernandosilva.alvus+petidadmin@gmail.com` precisa de `role: admin` em `app_metadata` (ver changelog 2026-07-09 config admin); ~~aplicar migrations `013`–`016`~~ **014–016 aplicadas** (2026-08-04)
+2. **Config produção:** `ai_provider.active_provider` fake → ollama; Turnstile chaves reais; definir **região de atuação** das orgs em `/admin/organizacoes`; **usuário admin** `fernandosilva.alvus+petidadmin@gmail.com` precisa de `role: admin` em `app_metadata` (ver changelog 2026-07-09 config admin); ~~aplicar migrations `013`–`016`~~ **014–016 aplicadas** (2026-08-04); aplicar `020`–`027` se ainda pendentes (chat, ocorrência enriquecida, endereços tutor/mapa, leitura com endereço)
 3. **Validação staging:** dry-run retenção (`/admin/retencao`); smoke test resgate → match → notificação; testes automatizados (Art. 7.1).
 4. **LGPD:** fluxo de exclusão de conta (security.md §1) — não implementado.
 5. **Deploy frontend** Vercel + domínio.

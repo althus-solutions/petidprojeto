@@ -76,10 +76,11 @@ export function PushOptIn() {
         </span>
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-[#B7791F]">
-            Receba alertas instantâneos no celular
+            Ative alertas enquanto o pet estiver perdido
           </p>
           <p className="mt-1 text-[13.5px] leading-relaxed text-[#8A6216]">
-            Ative as notificações push para ser avisado quando alguém ler o QR Code do seu pet
+            Com a ocorrência aberta, o push avisa no celular sobre leituras da tag e possíveis
+            matches
             {canalPreferido === 'push' ? ' (seu canal preferido)' : ''}.
           </p>
           {message && <p className="mt-2 text-xs text-red-600">{message}</p>}

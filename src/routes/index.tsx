@@ -18,6 +18,7 @@ import {
   OrgaoRejectedPage,
 } from '@/pages/orgao/OrgaoPendingPage'
 import { PetPublicPage } from '@/pages/public/PetPublicPage'
+import { PrivacyPolicyPage } from '@/pages/public/PrivacyPolicyPage'
 import { QrReadPage } from '@/pages/public/QrReadPage'
 import { RescueRegisterPage } from '@/pages/public/RescueRegisterPage'
 import { TutorDashboardPage } from '@/pages/tutor/TutorDashboardPage'
@@ -25,6 +26,7 @@ import { TutorMatchesPage } from '@/pages/tutor/TutorMatchesPage'
 import { TutorOcorrenciasPage } from '@/pages/tutor/TutorOcorrenciasPage'
 import { TutorProfilePage } from '@/pages/tutor/TutorProfilePage'
 import { PetDetailPage } from '@/pages/tutor/PetDetailPage'
+import { PetEditPage } from '@/pages/tutor/PetEditPage'
 import { PetNewPage } from '@/pages/tutor/PetNewPage'
 import { LostOccurrencePage } from '@/pages/tutor/LostOccurrencePage'
 
@@ -35,6 +37,7 @@ export function AppRoutes() {
         <Route path="pet/:payload" element={<PetPublicPage />} />
         <Route path="qr/:payload" element={<QrReadPage />} />
         <Route path="resgate" element={<RescueRegisterPage />} />
+        <Route path="privacidade" element={<PrivacyPolicyPage />} />
         <Route path="cadastro" element={<RegisterHubPage />} />
         <Route path="cadastro/tutor" element={<RegisterTutorPage />} />
         <Route path="cadastro/organizacao" element={<RegisterOrgaoPage />} />
@@ -51,6 +54,7 @@ export function AppRoutes() {
           <Route path="matches" element={<TutorMatchesPage />} />
           <Route path="pets/novo" element={<PetNewPage />} />
           <Route path="pets/:id" element={<PetDetailPage />} />
+          <Route path="pets/:id/editar" element={<PetEditPage />} />
           <Route path="pets/:id/perdido" element={<LostOccurrencePage />} />
         </Route>
       </Route>
