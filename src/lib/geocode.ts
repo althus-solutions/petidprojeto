@@ -234,12 +234,12 @@ function montarEnderecoTexto(input: {
 }
 
 export class GoogleGeocodeError extends Error {
-  constructor(
-    message: string,
-    readonly status: string,
-  ) {
+  readonly status: string
+
+  constructor(message: string, status: string) {
     super(message)
     this.name = 'GoogleGeocodeError'
+    this.status = status
   }
 }
 
