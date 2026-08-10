@@ -8,13 +8,14 @@ import type {
 const FINGERPRINT_KEY = 'petid_qr_fingerprint'
 
 const PAGINA_QR_PADRAO: PaginaQrConfig = {
-  titulo: 'Perfil do animal',
+  titulo: 'Você encontrou este pet?',
   instrucao:
-    'Confira se é o animal certo. Ao confirmar o resgate, o tutor é notificado e você pode falar com ele pelo WhatsApp (se houver telefone cadastrado).',
+    'Confira se é o animal certo. Aceite os termos e toque em Confirmar Resgate — em seguida pedimos a localização em um passo separado.',
   mensagem_contato:
-    'Ao confirmar o resgate, o tutor será avisado pelo canal que ele configurou (WhatsApp, e-mail ou push).',
+    'Ao confirmar o resgate, o tutor será avisado pela MyPetID (se houver ocorrência de perda aberta).',
+  /** Usado só no contexto auditável / modal — não é checkbox na página. */
   texto_consentimento:
-    'Autorizo compartilhar minha localização aproximada com o tutor deste pet, só para facilitar o reencontro.',
+    'Compartilho minha localização aproximada com o tutor deste pet para facilitar o reencontro.',
   versao_termos_consentimento: '1.0',
 }
 
@@ -76,20 +77,45 @@ function normalizeFotoPaths(
   }
 
   const paths = arr
-    .map((p) => (typeof p === 'string' ? p.trim() : ''))
-    .filter(Boolean)
+    .map((p) => (typeof p === 'string' ? normalizeStoragePath(p) : null))
+    .filter((p): p is string => Boolean(p))
 
   const unique = [...new Set(paths)]
   if (unique.length > 0) return unique
-  if (fallback?.trim()) return [fallback.trim()]
+  const fb = normalizeStoragePath(fallback)
+  if (fb) return [fb]
   return []
+}
+
+/** Normaliza path gravado no banco para o object name do bucket `pets`. */
+export function normalizeStoragePath(fotoPath: string | null | undefined): string | null {
+  if (!fotoPath) return null
+  let path = fotoPath.trim()
+  if (!path) return null
+
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    // mantém path original se não for URI válida
+  }
+
+  path = path.replace(/^\/+/, '')
+  // Alguns registros antigos podem ter prefixo do bucket
+  path = path.replace(/^pets\//i, '')
+  // URL completa acidental → extrai path após /pets/
+  const fromUrl = path.match(/\/storage\/v1\/object\/(?:public|sign)\/pets\/(.+?)(?:\?|$)/i)
+  if (fromUrl?.[1]) {
+    path = decodeURIComponent(fromUrl[1])
+  }
+
+  path = path.split('?')[0]?.trim() ?? ''
+  return path || null
 }
 
 export async function getPetPhotoUrl(
   fotoPath: string | null,
 ): Promise<string | null> {
-  if (!fotoPath) return null
-  const path = fotoPath.replace(/^\/+/, '').trim()
+  const path = normalizeStoragePath(fotoPath)
   if (!path) return null
 
   const { data, error } = await supabase.storage
@@ -97,15 +123,6 @@ export async function getPetPhotoUrl(
     .createSignedUrl(path, 3600)
 
   if (!error && data?.signedUrl) return data.signedUrl
-
-  // Retry sem querystring / espaços acidentais
-  const cleaned = decodeURIComponent(path).trim()
-  if (cleaned !== path) {
-    const retry = await supabase.storage
-      .from('pets')
-      .createSignedUrl(cleaned, 3600)
-    if (!retry.error && retry.data?.signedUrl) return retry.data.signedUrl
-  }
 
   return null
 }
@@ -118,7 +135,13 @@ export function resolvePetFotoPaths(pet: PetPublicoQr): string[] {
 export async function getPetPhotoUrls(
   fotoPaths: string[],
 ): Promise<string[]> {
-  const unique = [...new Set(fotoPaths.map((p) => p.trim()).filter(Boolean))]
+  const unique = [
+    ...new Set(
+      fotoPaths
+        .map((p) => normalizeStoragePath(p))
+        .filter((p): p is string => Boolean(p)),
+    ),
+  ]
   if (unique.length === 0) return []
 
   // Batch primeiro (menos round-trips); fallback individual se a API falhar

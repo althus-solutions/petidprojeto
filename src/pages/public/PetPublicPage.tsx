@@ -96,7 +96,7 @@ export function PetPublicPage() {
     setPhotoIndex(0)
     setPhotoWarning(
       urls.length === 0
-        ? 'Foto cadastrada, mas o acesso à imagem falhou. Peça ao tutor para reenviar a foto ou aplique a migration 036.'
+        ? 'Foto cadastrada, mas o acesso à imagem falhou. Aplique a migration 037 no Supabase (SQL Editor).'
         : null,
     )
   }, [])
@@ -498,6 +498,7 @@ export function PetPublicPage() {
             {config.instrucao}
           </p>
 
+          {/* Único checkbox da tela: termos. Localização só no modal após Confirmar. */}
           <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] bg-brand-50 px-4 py-3.5">
             <input
               type="checkbox"

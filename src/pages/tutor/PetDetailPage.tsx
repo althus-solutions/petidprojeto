@@ -150,7 +150,11 @@ export function PetDetailPage() {
           <h2 className="font-display text-lg font-bold text-brand-dark">
             Ocorrências de perda
           </h2>
-          {!ocorrencias.some((o) => o.status === 'aberta') && (
+          {ocorrencias.some((o) => o.status === 'aberta') ? (
+            <ButtonLink to="/tutor/ocorrencias" variant="primary" size="sm">
+              Ver ocorrência
+            </ButtonLink>
+          ) : (
             <ButtonLink
               to={`/tutor/pets/${animal.id}/perdido`}
               variant="outline"

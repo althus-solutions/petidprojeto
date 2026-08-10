@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { LostOccurrenceForm } from '@/components/ocorrencias/LostOccurrenceForm'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
-import { ButtonLink } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/contexts/AuthContext'
 import { listOcorrenciasByAnimal } from '@/lib/ocorrencias'
@@ -42,6 +41,11 @@ export function LostOccurrencePage() {
         setAnimal(pet)
         const lista = await listOcorrenciasByAnimal(animalId)
         setOcorrencias(lista)
+
+        // Já há perda aberta → vai ao mapa (esta tela só serve para abrir nova)
+        if (lista.some((o) => o.status === 'aberta')) {
+          navigate('/tutor/ocorrencias', { replace: true })
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar')
       } finally {
@@ -50,9 +54,7 @@ export function LostOccurrencePage() {
     }
 
     void load()
-  }, [id, user?.tutor?.id])
-
-  const temAberta = ocorrencias.some((o) => o.status === 'aberta')
+  }, [id, navigate, user?.tutor?.id])
 
   if (loading) {
     return <p className="text-sm text-gray-500">Carregando…</p>
@@ -67,6 +69,11 @@ export function LostOccurrencePage() {
     )
   }
 
+  // Evita flash do formulário enquanto redireciona
+  if (ocorrencias.some((o) => o.status === 'aberta')) {
+    return <p className="text-sm text-gray-500">Abrindo ocorrência…</p>
+  }
+
   return (
     <section className="mx-auto max-w-xl space-y-6">
       <TutorBackLink to={`/tutor/pets/${animal.id}`}>
@@ -78,37 +85,14 @@ export function LostOccurrencePage() {
           Animal perdido
         </h1>
 
-        {temAberta ? (
-          <div className="mt-4 space-y-3">
-            <div className="rounded-[14px] bg-brand-50 px-4 py-3.5 text-sm leading-relaxed text-brand-700">
-              <strong>{animal.nome}</strong> já está com uma ocorrência de perda{' '}
-              <strong>aberta</strong>. Acompanhe no mapa ou registre o
-              reencontro em Ocorrências quando o pet for encontrado.
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <ButtonLink to="/tutor/ocorrencias" variant="primary" size="sm">
-                Ver no mapa de ocorrências
-              </ButtonLink>
-              <ButtonLink
-                to={`/tutor/pets/${animal.id}`}
-                variant="outline"
-                size="sm"
-              >
-                Voltar ao pet
-              </ButtonLink>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-6">
-            <LostOccurrenceForm
-              animal={animal}
-              onSuccess={() => {
-                // Vai ao mapa — evita trocar o sucesso pelo aviso de “já existe aberta”
-                navigate('/tutor/ocorrencias', { replace: true })
-              }}
-            />
-          </div>
-        )}
+        <div className="mt-6">
+          <LostOccurrenceForm
+            animal={animal}
+            onSuccess={() => {
+              navigate('/tutor/ocorrencias', { replace: true })
+            }}
+          />
+        </div>
       </Card>
 
       {ocorrencias.length > 0 && (
@@ -124,7 +108,9 @@ export function LostOccurrencePage() {
                   {o.data_perda}
                   {o.retroativa ? ' (retroativa)' : ''}
                 </span>
-                <span className="font-bold capitalize text-brand-dark">{o.status}</span>
+                <span className="font-bold capitalize text-brand-dark">
+                  {o.status}
+                </span>
               </li>
             ))}
           </ul>

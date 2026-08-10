@@ -44,6 +44,23 @@
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
 
+### 2026-08-10 — UX — Resgate: só checkbox de termos + modal de localização
+- **RF:** RF-03
+- **Entregas:** na `/pet` permanece apenas “Aceito os termos…”; localização só no `LocationConsentModal` ao tocar Confirmar Resgate; seed `pagina_qr` atualizado (`038`)
+- **Arquivos:** `PetPublicPage.tsx`, `LocationConsentModal.tsx`, `qr-read.ts`, `038_pagina_qr_sem_checkbox_localizacao.sql`
+- **Ops:** aplicar `038` (opcional, só texto da config); **republicar front** — produção ainda servia build antigo com 2 checkboxes
+- **Nota:** PWA pode cachear JS antigo — atualizar/reinstalar app se o checkbox de localização persistir
+
+### 2026-08-10 — Fix — Foto pública /pet + fim do aviso “já existe aberta”
+- **RF:** RF-03, RF-04
+- **Entregas:**
+  - Foto no `/pet`: policy Storage usava EXISTS em `animais`/`animal_fotos` sob RLS do tutor → anon nunca passava no `createSignedUrl`. Migration `037` com `storage_object_is_pet_foto` (SECURITY DEFINER).
+  - Normalização de paths no frontend (`normalizeStoragePath`).
+  - Abrir perda: se já houver ocorrência aberta → redireciona ao mapa; após criar → mapa; no detalhe do pet, CTA “Ver ocorrência” (sem banner amarelo).
+- **Arquivos:** `037_storage_pet_foto_bypass_rls.sql`, `qr-read.ts`, `LostOccurrencePage.tsx`, `PetDetailPage.tsx`, `PetPublicPage.tsx`
+- **Ops:** **aplicar `037` no SQL Editor do Supabase** (obrigatório para a foto aparecer para quem encontrou o pet)
+- **Validação:** pendente após aplicar 037 + deploy
+
 ### 2026-08-10 — Fix/UX — Aviso “já existe ocorrência aberta” após criar
 - **RF:** RF-04
 - **Entregas:** após criar perda, redireciona para `/tutor/ocorrencias` (mapa) em vez de remountar a tela com o aviso amarelo; copy do aviso (quando reentra com ocorrência já aberta) mais clara
