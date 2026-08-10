@@ -3,9 +3,8 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { countAlertasPendentes } from '@/lib/ocorrencia-alertas'
 import { listOcorrenciasAbertasTutor } from '@/lib/ocorrencias'
-import { getTutorPhotoSignedUrl } from '@/lib/tutor-perfil'
+import { ChatFabLink } from '@/components/chat/ChatFabLink'
 import { PetIdLogoMark } from '@/components/ui/PetIdLogo'
-import { ChatWidget } from '@/components/chat/ChatWidget'
 
 interface AppLayoutProps {
   area: 'tutor' | 'orgao' | 'admin'
@@ -15,6 +14,12 @@ const areaLabels: Record<AppLayoutProps['area'], string> = {
   tutor: 'Painel do tutor',
   orgao: 'Painel do órgão',
   admin: 'Painel admin',
+}
+
+function labelAreaOrgao(tipo?: string | null) {
+  if (tipo === 'prefeitura') return 'Painel da prefeitura'
+  if (tipo === 'ong') return 'Painel da ONG'
+  return areaLabels.orgao
 }
 
 const tutorBottomNav = [
@@ -29,6 +34,12 @@ const tutorBottomNav = [
     label: 'Ocorrências',
     end: false,
     icon: MapPinIcon,
+  },
+  {
+    to: '/tutor/perfil',
+    label: 'Perfil',
+    end: false,
+    icon: ProfileIcon,
   },
 ] as const
 
@@ -73,11 +84,29 @@ function MapPinIcon({ active }: { active: boolean }) {
   )
 }
 
+function ProfileIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? '2' : '1.7'}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5.5 19.5c1.6-3.2 4-4.8 6.5-4.8s4.9 1.6 6.5 4.8" />
+    </svg>
+  )
+}
+
 export function AppLayout({ area }: AppLayoutProps) {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [ocorrenciaAlertas, setOcorrenciaAlertas] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
@@ -87,6 +116,9 @@ export function AppLayout({ area }: AppLayoutProps) {
     const path = location.pathname
     if (to === '/tutor/ocorrencias') {
       return path.startsWith('/tutor/ocorrencias')
+    }
+    if (to === '/tutor/perfil') {
+      return path.startsWith('/tutor/perfil')
     }
     // Meus pets: ativo em /tutor e rotas de pet; não em ocorrências/perfil
     if (end) {
@@ -111,15 +143,6 @@ export function AppLayout({ area }: AppLayoutProps) {
       /* ignore — migration pode faltar */
     }
   }, [isTutor, user?.tutor?.id])
-
-  useEffect(() => {
-    const path = user?.tutor?.foto_url
-    if (!path || !isTutor) {
-      setAvatarUrl(null)
-      return
-    }
-    void getTutorPhotoSignedUrl(path).then(setAvatarUrl)
-  }, [isTutor, user?.tutor?.foto_url])
 
   useEffect(() => {
     if (!isTutor) return
@@ -168,61 +191,57 @@ export function AppLayout({ area }: AppLayoutProps) {
       >
         <div
           className={[
-            'mx-auto flex max-w-[1120px] items-center justify-between gap-3',
+            'mx-auto flex max-w-[1120px] items-center gap-3',
             isTutor
-              ? 'h-14 rounded-[22px] border border-surface-border bg-white/95 px-3.5 shadow-soft backdrop-blur-sm sm:h-[60px] sm:px-5'
-              : 'h-14 px-4 sm:h-[64px] sm:px-8',
+              ? 'h-14 justify-center rounded-[22px] border border-surface-border bg-white/95 px-3.5 shadow-soft backdrop-blur-sm sm:h-[60px] sm:px-5'
+              : 'h-14 justify-between px-4 sm:h-[64px] sm:px-8',
           ].join(' ')}
         >
           <Link to={`/${area}`} className="flex shrink-0 items-center gap-2.5">
             <PetIdLogoMark />
             <span className="flex flex-col leading-tight">
               <span className="font-display text-[17px] font-extrabold text-brand-dark sm:text-lg">
-                PetID
+                MyPetID
               </span>
               {!isTutor && (
                 <span className="text-xs font-semibold text-gray-500">
-                  {areaLabels[area]}
+                  {area === 'orgao'
+                    ? labelAreaOrgao(user?.organizacao?.tipo)
+                    : areaLabels[area]}
                 </span>
               )}
             </span>
           </Link>
 
-          <div className="relative flex shrink-0 items-center gap-3" ref={menuRef}>
-            {area === 'admin' && user?.mfa?.verified && (
-              <span className="hidden items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-500 sm:inline-flex">
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden
-                >
-                  <rect x="4" y="10" width="16" height="10" rx="2" />
-                  <path d="M8 10V7a4 4 0 018 0v3" />
-                </svg>
-                MFA verificado
-              </span>
-            )}
+          {!isTutor && (
+            <div className="relative flex shrink-0 items-center gap-3" ref={menuRef}>
+              {area === 'admin' && user?.mfa?.verified && (
+                <span className="hidden items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-500 sm:inline-flex">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <rect x="4" y="10" width="16" height="10" rx="2" />
+                    <path d="M8 10V7a4 4 0 018 0v3" />
+                  </svg>
+                  MFA verificado
+                </span>
+              )}
 
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-surface-border bg-brand-50 text-brand-500 transition-colors hover:border-brand-500 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-              aria-label="Menu da conta"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              aria-controls={menuId}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-surface-border bg-brand-50 text-brand-500 transition-colors hover:border-brand-500 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                aria-label="Menu da conta"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-controls={menuId}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -237,40 +256,30 @@ export function AppLayout({ area }: AppLayoutProps) {
                   <circle cx="12" cy="8" r="3.5" />
                   <path d="M5.5 19.5c1.6-3.2 4-4.8 6.5-4.8s4.9 1.6 6.5 4.8" />
                 </svg>
-              )}
-            </button>
+              </button>
 
-            {menuOpen && (
-              <div
-                id={menuId}
-                role="menu"
-                className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-surface-border bg-white py-1 shadow-lg"
-                style={{ top: '100%' }}
-              >
-                {isTutor && (
-                  <Link
-                    role="menuitem"
-                    to="/tutor/perfil"
-                    className="block px-4 py-2.5 text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-brand-50 hover:text-brand-500"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Meu perfil
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="block w-full px-4 py-2.5 text-left text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-brand-50 hover:text-brand-500"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    void signOut()
-                  }}
+              {menuOpen && (
+                <div
+                  id={menuId}
+                  role="menu"
+                  className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-surface-border bg-white py-1 shadow-lg"
+                  style={{ top: '100%' }}
                 >
-                  Sair
-                </button>
-              </div>
-            )}
-          </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-4 py-2.5 text-left text-[13.5px] font-semibold text-gray-700 transition-colors hover:bg-brand-50 hover:text-brand-500"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      void signOut()
+                    }}
+                  >
+                    Sair
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -341,13 +350,7 @@ export function AppLayout({ area }: AppLayoutProps) {
         </nav>
       )}
 
-      {isTutor && (
-        <ChatWidget
-          mode="tutor"
-          fabClassName="bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4"
-          panelClassName="bottom-[calc(10.25rem+env(safe-area-inset-bottom))] right-4"
-        />
-      )}
+      {isTutor && <ChatFabLink />}
     </div>
   )
 }

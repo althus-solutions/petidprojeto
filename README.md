@@ -1,4 +1,4 @@
-# PetID
+# MyPetID
 
 Plataforma de reencontro de animais perdidos — QR Code fixo na coleira + matching por IA entre ocorrências de perda e registros de resgate.
 

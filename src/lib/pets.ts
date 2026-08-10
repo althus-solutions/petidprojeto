@@ -35,6 +35,16 @@ export function buildPetPublicUrl(qrPayload: string): string {
   return `${origin}/pet/${encodeURIComponent(qrPayload)}`
 }
 
+export function hasTagRegistrada(animal: {
+  tag_status?: string | null
+  qr_payload?: string | null
+}): boolean {
+  return (
+    animal.tag_status === 'registrada' ||
+    Boolean(animal.qr_payload && animal.qr_payload.length > 0)
+  )
+}
+
 /** Alias usado pelo display do QR (mesmo link do NFC). */
 export function buildQrUrl(qrPayload: string): string {
   return buildPetPublicUrl(qrPayload)
@@ -156,6 +166,7 @@ export async function animalToFormValues(
     porte: animal.porte ?? '',
     peso: animal.peso ?? '',
     caracteristicas: animal.caracteristicas ?? '',
+    microchip: animal.microchip ?? '',
     sexo: animal.sexo ? SEXO_LABEL[animal.sexo] : '',
     castrado: animal.castrado ? CASTRADO_LABEL[animal.castrado] : '',
     padrao_pelagem: animal.padrao_pelagem
@@ -255,6 +266,7 @@ function mapFormToAnimalFields(
     'porte',
     'peso',
     'caracteristicas',
+    'microchip',
   ]
 
   for (const coluna of colunas) {
@@ -468,15 +480,15 @@ export async function createAnimal(
     validatePetFotoFile(slot.file!)
   }
 
-  // qr_payload gerado uma única vez no cadastro — imutável depois
-  const qrPayload = generateQrPayload()
+  // QR/NFC só após solicitar tag e gerar (ver solicitarTag / gerarTagDigital)
   const fields = mapFormToAnimalFields(values, {
     origem: 'tutor/pets/novo',
   })
   const row = {
     ...fields,
     tutor_id: tutorId,
-    qr_payload: qrPayload,
+    qr_payload: null,
+    tag_status: 'nao_solicitada',
   }
 
   const { data: animal, error } = await supabase
@@ -485,7 +497,12 @@ export async function createAnimal(
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    if (error.code === '23505' && error.message.toLowerCase().includes('microchip')) {
+      throw new Error('Este número de microchip já está cadastrado.')
+    }
+    throw error
+  }
 
   const uploaded = await uploadPetPhotos(tutorId, animal.id, fotoSlots)
 
@@ -550,7 +567,12 @@ export async function updateAnimal(
     .eq('id', animalId)
     .eq('tutor_id', tutorId)
 
-  if (error) throw error
+  if (error) {
+    if (error.code === '23505' && error.message.toLowerCase().includes('microchip')) {
+      throw new Error('Este número de microchip já está cadastrado.')
+    }
+    throw error
+  }
 
   await syncAnimalFotos(tutorId, animalId, fotoSlots)
 
@@ -562,11 +584,74 @@ export async function updateAnimal(
 
   if (reloadError) throw reloadError
 
-  if (updated.qr_payload !== existing.qr_payload) {
+  if (
+    existing.qr_payload &&
+    updated.qr_payload !== existing.qr_payload
+  ) {
     throw new Error(
       'Falha de integridade: o QR/link da tag não pode ser alterado.',
     )
   }
 
   return updated as Animal
+}
+
+/** Marca o pedido da tag física (etapa anterior ao pagamento futuro). */
+export async function solicitarTag(animalId: string): Promise<Animal> {
+  const existing = await getAnimalById(animalId)
+  if (!existing) throw new Error('Pet não encontrado')
+  if (existing.tag_status === 'registrada' || existing.qr_payload) {
+    return existing
+  }
+
+  const { data, error } = await supabase
+    .from('animais')
+    .update({ tag_status: 'solicitada' })
+    .eq('id', animalId)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return data as Animal
+}
+
+/**
+ * Gera o payload único e marca a tag como registrada (QR + NFC disponíveis).
+ * Futuro: só após confirmação de pagamento.
+ */
+export async function gerarTagDigital(animalId: string): Promise<Animal> {
+  const existing = await getAnimalById(animalId)
+  if (!existing) throw new Error('Pet não encontrado')
+
+  if (existing.qr_payload) {
+    if (existing.tag_status !== 'registrada') {
+      const { data, error } = await supabase
+        .from('animais')
+        .update({ tag_status: 'registrada' })
+        .eq('id', animalId)
+        .select('*')
+        .single()
+      if (error) throw error
+      return data as Animal
+    }
+    return existing
+  }
+
+  if (existing.tag_status === 'nao_solicitada') {
+    throw new Error('Solicite a tag antes de gerar o QR Code e o NFC.')
+  }
+
+  const qrPayload = generateQrPayload()
+  const { data, error } = await supabase
+    .from('animais')
+    .update({
+      qr_payload: qrPayload,
+      tag_status: 'registrada',
+    })
+    .eq('id', animalId)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return data as Animal
 }

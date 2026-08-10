@@ -91,6 +91,7 @@ export function OrgaoDashboardPage() {
 
   const orgNome = user?.organizacao?.nome ?? painel?.organizacao.nome ?? 'Organização'
   const orgTipo = user?.organizacao?.tipo ?? painel?.organizacao.tipo
+  const isPrefeitura = orgTipo === 'prefeitura'
   const alertasCount = painel?.alertas.length ?? 0
 
   return (
@@ -136,6 +137,15 @@ export function OrgaoDashboardPage() {
           </div>
 
           <ButtonLink
+            to="/orgao/animais"
+            variant="outline"
+            size="sm"
+            className="w-full justify-center sm:w-auto"
+          >
+            {isPrefeitura ? 'Inventário regional' : 'Animais cadastrados'}
+          </ButtonLink>
+
+          <ButtonLink
             to="/orgao/encontrei"
             variant="primary"
             size="sm"
@@ -146,6 +156,13 @@ export function OrgaoDashboardPage() {
           </ButtonLink>
         </div>
       </div>
+
+      {isPrefeitura && (
+        <p className="rounded-[14px] border border-brand-100 bg-white px-4 py-3 text-[13.5px] leading-relaxed text-gray-600">
+          Conta de prefeitura: além do painel da sua região, você visualiza o
+          inventário de animais de todas as ONGs e órgãos parceiros aprovados.
+        </p>
+      )}
 
       {loading && (
         <p className="text-sm text-gray-500">Carregando painel…</p>

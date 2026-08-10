@@ -113,6 +113,7 @@ export async function createResgateAutenticado(params: {
   porteEstimado: string
   regiaoAproximada: string
   descricao?: string
+  microchip?: string
   consentimentoLocalizacao: boolean
   latitude?: number
   longitude?: number
@@ -142,6 +143,7 @@ export async function createResgateAutenticado(params: {
     p_longitude: params.consentimentoLocalizacao ? params.longitude : null,
     p_organizacao_id: params.organizacaoId ?? null,
     p_consentimento_contexto: contexto,
+    p_microchip: params.microchip?.trim() || null,
   })
 
   if (error) throw error

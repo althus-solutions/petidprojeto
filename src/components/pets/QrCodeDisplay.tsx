@@ -13,11 +13,12 @@ export function QrCodeDisplay({ animal }: QrCodeDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const tagUrl = buildPetPublicUrl(animal.qr_payload)
+  const payload = animal.qr_payload
+  const tagUrl = payload ? buildPetPublicUrl(payload) : ''
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !tagUrl) return
 
     void QRCode.toCanvas(canvas, tagUrl, {
       width: 256,
@@ -25,6 +26,8 @@ export function QrCodeDisplay({ animal }: QrCodeDisplayProps) {
       color: { dark: '#6C4FE0', light: '#ffffff' },
     }).catch((err: Error) => setError(err.message))
   }, [tagUrl])
+
+  if (!payload) return null
 
   function handleDownload() {
     const canvas = canvasRef.current
@@ -50,11 +53,11 @@ export function QrCodeDisplay({ animal }: QrCodeDisplayProps) {
     <Card className="space-y-5">
       <div>
         <h2 className="font-display text-lg font-bold text-brand-dark">
-          Tag — {animal.nome}
+          Tag registrada — {animal.nome}
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          Identificação única deste animal. Use o QR na coleira e o mesmo link
-          no NFC — ambos abrem o perfil público do pet.
+          Este animal já tem coleira/tag com QR e NFC. Baixe o PNG e copie o
+          link para gravar no chip.
         </p>
       </div>
 

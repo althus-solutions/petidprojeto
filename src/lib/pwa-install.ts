@@ -1,4 +1,4 @@
-/** Tipos e helpers para instalação do PetID como PWA no celular. */
+/** Tipos e helpers para instalação do MyPetID como PWA no celular. */
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[]

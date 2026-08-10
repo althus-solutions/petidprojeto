@@ -62,7 +62,7 @@ export function RegisterHubPage() {
           Criar conta
         </h1>
         <p className="mt-2 text-[14.5px] leading-relaxed text-gray-500">
-          Escolha como você vai usar o PetID. Depois você preenche o cadastro
+          Escolha como você vai usar o MyPetID. Depois você preenche o cadastro
           correspondente.
         </p>
       </div>

@@ -22,8 +22,8 @@ export default defineConfig({
         'apple-touch-icon.png',
       ],
       manifest: {
-        name: 'PetID — Reencontro de Animais',
-        short_name: 'PetID',
+        name: 'MyPetID — Reencontro de Animais',
+        short_name: 'MyPetID',
         description:
           'Plataforma de reencontro de animais perdidos via QR Code e matching inteligente.',
         theme_color: '#6C4FE0',

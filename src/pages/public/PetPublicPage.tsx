@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Button } from '@/components/ui/Button'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Button, ButtonLink } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { ChatWidget } from '@/components/chat/ChatWidget'
 import { reverseGeocode } from '@/lib/geocode'
 import {
   buildWhatsAppUrl,
@@ -48,6 +47,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 export function PetPublicPage() {
   const { payload: rawPayload } = useParams<{ payload: string }>()
+  const navigate = useNavigate()
   const qrPayload = rawPayload ? decodeURIComponent(rawPayload) : null
 
   const [step, setStep] = useState<PetPublicStep>('loading')
@@ -65,7 +65,12 @@ export function PetPublicPage() {
     string | null
   >(null)
   const [leituraId, setLeituraId] = useState<string | null>(null)
-  const [chatAutoOpen, setChatAutoOpen] = useState(false)
+
+  function chatPath(leitura?: string | null) {
+    if (!qrPayload) return '/login'
+    const base = `/pet/${encodeURIComponent(qrPayload)}/chat`
+    return leitura ? `${base}?leitura=${encodeURIComponent(leitura)}` : base
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -172,8 +177,11 @@ export function PetPublicPage() {
         setTutorNotificado(Boolean(resultado.notificado))
         setTutorTelefoneWhatsapp(resultado.tutor_telefone_whatsapp ?? null)
         setLeituraId(resultado.leitura_id ?? null)
-        setChatAutoOpen(true)
         setStep('done')
+        if (resultado.leitura_id && qrPayload) {
+          navigate(chatPath(resultado.leitura_id))
+          return
+        }
       } catch (err) {
         setError(
           mapQrErrorMessage(
@@ -186,7 +194,7 @@ export function PetPublicPage() {
         setSubmitting(false)
       }
     },
-    [config, pet?.ocorrencia_aberta, qrPayload],
+    [config, navigate, pet?.ocorrencia_aberta, qrPayload],
   )
 
   if (step === 'loading') {
@@ -243,7 +251,7 @@ export function PetPublicPage() {
             </h1>
             {(pet.tem_tutor || pet.tutor_nome) && (
               <p className="mt-1 text-[13px] text-gray-500">
-                Tutor: {pet.tutor_nome ?? 'cadastrado na PetID'}
+                Tutor: {pet.tutor_nome ?? 'cadastrado na MyPetID'}
               </p>
             )}
           </div>
@@ -261,7 +269,7 @@ export function PetPublicPage() {
             to="/login"
             className="inline-flex font-bold text-brand-500 hover:underline"
           >
-            Entrar na PetID →
+            Entrar na MyPetID →
           </Link>
         </Card>
       </section>
@@ -273,7 +281,7 @@ export function PetPublicPage() {
       tutorNotificado && tutorTelefoneWhatsapp
         ? buildWhatsAppUrl(
             tutorTelefoneWhatsapp,
-            `Olá! Encontrei ${pet.nome} pela tag PetID e confirmei o resgate.`,
+            `Olá! Encontrei ${pet.nome} pela tag MyPetID e confirmei o resgate.`,
           )
         : null
 
@@ -311,10 +319,15 @@ export function PetPublicPage() {
               : 'O tutor só é avisado se houver uma ocorrência de perda aberta na plataforma.'}
           </p>
 
-          <p className="text-[13px] leading-relaxed text-gray-500">
-            Use o ícone de chat no canto inferior para falar com o tutor pela
-            PetID.
-          </p>
+          {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
+            <ButtonLink
+              to={chatPath(leituraId)}
+              variant="primary"
+              className="w-full py-[14px] text-[15px]"
+            >
+              Abrir chat com o tutor
+            </ButtonLink>
+          )}
 
           {whatsappUrl ? (
             <a
@@ -331,15 +344,6 @@ export function PetPublicPage() {
             Voltar ao início
           </Link>
         </Card>
-
-        {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
-          <ChatWidget
-            mode="finder"
-            qrPayload={qrPayload}
-            leituraId={leituraId}
-            autoOpen={chatAutoOpen}
-          />
-        )}
       </section>
     )
   }
@@ -455,10 +459,10 @@ export function PetPublicPage() {
                 Possui tutor
               </p>
               <p className="mt-1 font-display text-[15px] font-extrabold text-brand-dark">
-                {pet.tutor_nome ?? 'Tutor cadastrado na PetID'}
+                {pet.tutor_nome ?? 'Tutor cadastrado na MyPetID'}
               </p>
               <p className="mt-1 text-[12px] text-gray-500">
-                Após confirmar o resgate, fale com o tutor pelo chat da PetID
+                Após confirmar o resgate, fale com o tutor pelo chat da MyPetID
                 (ícone no canto inferior). WhatsApp fica disponível se houver
                 telefone cadastrado.
               </p>
@@ -493,7 +497,7 @@ export function PetPublicPage() {
                 disabled={submitting}
               />
               <span className="text-[13px] leading-relaxed text-gray-700">
-                Aceito os termos e condições da PetID para confirmar este
+                Aceito os termos e condições da MyPetID para confirmar este
                 resgate. *
               </span>
             </label>
@@ -532,7 +536,28 @@ export function PetPublicPage() {
       </Card>
 
       {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
-        <ChatWidget mode="finder" qrPayload={qrPayload} leituraId={leituraId} />
+        <div className="fixed bottom-5 right-5 z-[70]">
+          <ButtonLink
+            to={chatPath(leituraId)}
+            variant="primary"
+            className="!h-14 !w-14 !rounded-full !p-0 shadow-lg"
+            aria-label="Abrir chat com o tutor"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M21 15a3 3 0 01-3 3H8l-5 3V6a3 3 0 013-3h12a3 3 0 013 3z" />
+            </svg>
+          </ButtonLink>
+        </div>
       )}
     </section>
   )

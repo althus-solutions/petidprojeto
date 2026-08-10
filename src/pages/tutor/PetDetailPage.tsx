@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { QrCodeDisplay } from '@/components/pets/QrCodeDisplay'
+import { TagSolicitacaoPanel } from '@/components/pets/TagSolicitacaoPanel'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
 import { Badge } from '@/components/ui/Badge'
 import { ButtonLink } from '@/components/ui/Button'
@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { listOcorrenciasByAnimal } from '@/lib/ocorrencias'
 import { getAnimalById, getPetPhotoSignedUrl } from '@/lib/pets'
 import type { OcorrenciaPerdido } from '@/types/ocorrencia'
-import type { Animal } from '@/types/pet'
+import { labelTagStatus, type Animal } from '@/types/pet'
 
 export function PetDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -90,7 +90,13 @@ export function PetDetailPage() {
                     </p>
                   )}
                   <div className="mt-2">
-                    <Badge>QR ativo</Badge>
+                    {(() => {
+                      const tag = labelTagStatus(
+                        animal.tag_status ??
+                          (animal.qr_payload ? 'registrada' : 'nao_solicitada'),
+                      )
+                      return <Badge variant={tag.variant}>{tag.label}</Badge>
+                    })()}
                   </div>
                 </div>
                 <ButtonLink
@@ -115,6 +121,12 @@ export function PetDetailPage() {
                   <dd className="text-gray-500">{animal.cor}</dd>
                 </>
               )}
+              {animal.microchip && (
+                <>
+                  <dt className="font-bold text-brand-dark">Microchip</dt>
+                  <dd className="font-mono text-gray-500">{animal.microchip}</dd>
+                </>
+              )}
               {animal.peso != null && (
                 <>
                   <dt className="font-bold text-brand-dark">Peso</dt>
@@ -131,7 +143,7 @@ export function PetDetailPage() {
         </div>
       </Card>
 
-      <QrCodeDisplay animal={animal} />
+      <TagSolicitacaoPanel animal={animal} onAnimalChange={setAnimal} />
 
       <Card className="p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

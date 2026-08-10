@@ -89,8 +89,31 @@ export interface Animal {
   foto_url: string | null
   consentimento_fotos_em: string | null
   consentimento_fotos_contexto: Record<string, unknown> | null
-  qr_payload: string
+  /** Número do microchip (opcional). */
+  microchip: string | null
+  /** Payload da tag — null até gerar QR/NFC. */
+  qr_payload: string | null
+  /**
+   * nao_solicitada → solicitada (pedido; pagamento futuro) → registrada (QR/NFC gerados).
+   */
+  tag_status: TagStatus
   created_at: string
+}
+
+export type TagStatus = 'nao_solicitada' | 'solicitada' | 'registrada'
+
+export function labelTagStatus(status: TagStatus | string | null | undefined): {
+  label: string
+  variant: 'brand' | 'success' | 'warning'
+} {
+  switch (status) {
+    case 'registrada':
+      return { label: 'Tag registrada', variant: 'success' }
+    case 'solicitada':
+      return { label: 'Tag solicitada', variant: 'warning' }
+    default:
+      return { label: 'Sem tag', variant: 'brand' }
+  }
 }
 
 export type PetFormValues = Record<
@@ -114,6 +137,7 @@ export const COLUNAS_ANIMAIS = [
   'cor',
   'peso',
   'caracteristicas',
+  'microchip',
 ] as const
 
 export type ColunaAnimal = (typeof COLUNAS_ANIMAIS)[number]

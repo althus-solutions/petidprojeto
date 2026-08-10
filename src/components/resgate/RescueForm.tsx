@@ -82,6 +82,7 @@ export function RescueForm({ organizacaoId, onSuccess }: RescueFormProps) {
   const [porte, setPorte] = useState('')
   const [regiao, setRegiao] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [microchip, setMicrochip] = useState('')
   const [consentiuLocalizacao, setConsentiuLocalizacao] = useState(false)
   const [honeypot, setHoneypot] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -169,6 +170,7 @@ export function RescueForm({ organizacaoId, onSuccess }: RescueFormProps) {
           porteEstimado: porte,
           regiaoAproximada: regiao.trim(),
           descricao: descricao.trim() || undefined,
+          microchip: microchip.trim() || undefined,
           consentimentoLocalizacao: consentiuLocalizacao,
           latitude,
           longitude,
@@ -277,6 +279,16 @@ export function RescueForm({ organizacaoId, onSuccess }: RescueFormProps) {
         rows={3}
         placeholder="Ex: cão pequeno, cor caramelo, muito dócil, encontrado perto da praça"
       />
+
+      {!isAnonymous && (
+        <Input
+          label="Número do microchip (opcional)"
+          value={microchip}
+          onChange={(e) => setMicrochip(e.target.value)}
+          placeholder="Se o animal tiver chip, informe o número"
+          autoComplete="off"
+        />
+      )}
 
       <Select
         label="Porte estimado *"

@@ -1,7 +1,7 @@
 import QRCode from 'qrcode'
 import { supabase } from '@/lib/supabase'
 
-const ADMIN_MFA_NAME = 'PetID Admin'
+const ADMIN_MFA_NAME = 'MyPetID Admin'
 
 export interface AdminMfaEnrollment {
   factorId: string

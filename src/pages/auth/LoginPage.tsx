@@ -166,17 +166,20 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen bg-white">
       {/* Formulário — esquerda */}
-      <div className="flex w-full flex-col justify-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-16 xl:px-24">
-        <div className="mx-auto w-full max-w-[420px]">
-          <div className="mb-8 flex flex-col items-center text-center lg:items-start lg:text-left">
+      <div className="flex w-full flex-col items-center justify-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-12 xl:px-16">
+        <div className="mx-auto w-full max-w-[360px]">
+          <div className="mb-8 flex flex-col items-center text-center">
             <PetIdLogoMark />
-            <h1 className="mt-5 font-display text-[26px] font-extrabold text-brand-dark sm:text-[28px]">
-              {mfaStep ? 'Verificação MFA' : 'Bem-vindo de volta'}
+            <p className="mt-3 font-display text-[18px] font-extrabold tracking-tight text-brand-dark">
+              MyPetID
+            </p>
+            <h1 className="mt-4 font-display text-[26px] font-extrabold text-brand-dark sm:text-[28px]">
+              {mfaStep ? 'Verificação MFA' : 'Bem-vindo'}
             </h1>
             <p className="mt-2 text-[14px] leading-relaxed text-gray-500">
               {mfaStep
                 ? 'Digite o código do autenticador (admin).'
-                : 'Login único para tutores e órgãos. Após entrar, você vai para a área do seu perfil.'}
+                : 'Acesse sua área do perfil.'}
             </p>
           </div>
 
@@ -246,7 +249,7 @@ export function LoginPage() {
                 </button>
               </div>
 
-              <p className="text-[13.5px] text-gray-500">
+              <p className="text-center text-[13.5px] text-gray-500">
                 <Link to="/cadastro" className={authLinkClassName}>
                   Criar conta
                 </Link>
@@ -266,7 +269,7 @@ export function LoginPage() {
       <aside className="relative hidden overflow-hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between">
         <img
           src="/login-pet.png"
-          alt="Pet encontrado pela PetID"
+          alt="Pet encontrado pela MyPetID"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-brand-dark/85 via-brand-800/75 to-brand-500/70" />
@@ -275,7 +278,7 @@ export function LoginPage() {
           <div className="flex items-center gap-3">
             <PetIdLogoMark />
             <span className="font-display text-lg font-extrabold text-white">
-              PetID
+              MyPetID
             </span>
           </div>
 

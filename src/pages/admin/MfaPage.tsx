@@ -198,7 +198,7 @@ export function MfaEnrollPage() {
                 {copied ? 'Chave copiada!' : 'Copiar chave'}
               </Button>
               <p className="text-xs text-gray-400">
-                Conta: PetID Admin · Tipo: baseada em horário (TOTP)
+                Conta: MyPetID Admin · Tipo: baseada em horário (TOTP)
               </p>
             </div>
           )}

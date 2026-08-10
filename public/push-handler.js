@@ -1,7 +1,7 @@
 /* Handler de Web Push — carregado pelo service worker do PWA (vite-plugin-pwa) */
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'PetID', body: 'Nova notificação', url: '/tutor' }
+  let data = { title: 'MyPetID', body: 'Nova notificação', url: '/tutor' }
 
   try {
     if (event.data) {

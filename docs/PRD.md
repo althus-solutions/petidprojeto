@@ -92,7 +92,7 @@ Cada item do PRD original mapeia para um **RF-XX** em [`spec.md`](spec.md). Stat
 | 4.4 | RF-04 | Ocorrência de animal perdido (incl. retroativa) | ✅ Enriquecida (geocoding + raio + consent) |
 | 4.5 | RF-05 | Registro de animal resgatado/encontrado | ✅ Implementado (CAPTCHA Turnstile no anônimo) |
 | 4.6 | RF-06 | Matching por IA (cor, porte, raça, score, raio) | ✅ Banco (009–010); deploy Edge `analyze-pet` + n8n pendente |
-| 4.7 | RF-07 | Painel de órgãos/ONGs | ✅ Migration 007 aplicada; configurar região de atuação das orgs |
+| 4.7 | RF-07 | Painel de órgãos/ONGs | ✅ Inventário `/orgao/animais` + visão prefeitura (033); configurar região das orgs |
 | 4.8 | RF-08 | Integração WhatsApp oficial | 🟡 Z-API via n8n (Prompt 7); templates Meta a validar |
 | 4.9 | RF-09 | Comunidade, recompensa, arte, plano saúde, hardware | 🚫 Fora do MVP |
 

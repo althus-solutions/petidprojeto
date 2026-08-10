@@ -90,12 +90,20 @@ const CAMPOS_PADRAO: CampoFormularioPet[] = [
     ordem: 10,
   },
   {
+    nome: 'microchip',
+    label: 'Número do microchip',
+    tipo: 'text',
+    obrigatorio: false,
+    visivel: true,
+    ordem: 11,
+  },
+  {
     nome: 'caracteristicas',
     label: 'Características distintivas',
     tipo: 'textarea',
     obrigatorio: false,
     visivel: true,
-    ordem: 11,
+    ordem: 12,
   },
   {
     nome: 'fotos',
@@ -103,7 +111,7 @@ const CAMPOS_PADRAO: CampoFormularioPet[] = [
     tipo: 'fotos',
     obrigatorio: true,
     visivel: true,
-    ordem: 12,
+    ordem: 13,
   },
 ]
 

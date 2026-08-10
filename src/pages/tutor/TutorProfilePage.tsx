@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import { InstallAppCard } from '@/components/pwa/InstallAppCard'
 import { TutorEnderecoFields } from '@/components/tutor/TutorEnderecoFields'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
@@ -35,6 +36,7 @@ function toDraft(contato: TutorContato): ContatoDraft {
 
 export function TutorProfilePage() {
   const { user, refreshUser } = useAuth()
+  const location = useLocation()
   const formId = useId()
 
   const [nome, setNome] = useState('')
@@ -53,6 +55,12 @@ export function TutorProfilePage() {
       if (fotoPreview?.startsWith('blob:')) URL.revokeObjectURL(fotoPreview)
     }
   }, [fotoPreview])
+
+  useEffect(() => {
+    if (location.hash !== '#baixar-app') return
+    const el = document.getElementById('baixar-app')
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [location.hash])
 
   useEffect(() => {
     async function load() {
@@ -222,7 +230,7 @@ export function TutorProfilePage() {
 
   return (
     <section className="mx-auto max-w-[620px] space-y-6">
-      <TutorBackLink to="/tutor">Voltar para meus pets</TutorBackLink>
+      <TutorBackLink to="/tutor/perfil">Voltar ao perfil</TutorBackLink>
 
       <div>
         <h1 className="font-display text-[25px] font-extrabold text-brand-dark">
@@ -233,7 +241,9 @@ export function TutorProfilePage() {
         </p>
       </div>
 
-      <InstallAppCard />
+      <div id="baixar-app" className="scroll-mt-24">
+        <InstallAppCard />
+      </div>
 
       {loading && <p className="text-sm text-gray-500">Carregando perfil…</p>}
 

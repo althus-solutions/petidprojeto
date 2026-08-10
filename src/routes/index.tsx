@@ -11,19 +11,24 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterHubPage } from '@/pages/auth/RegisterHubPage'
 import { RegisterOrgaoPage } from '@/pages/auth/RegisterOrgaoPage'
 import { RegisterTutorPage } from '@/pages/auth/RegisterTutorPage'
+import { OrgaoAnimalNovoPage } from '@/pages/orgao/OrgaoAnimalNovoPage'
+import { OrgaoAnimaisPage } from '@/pages/orgao/OrgaoAnimaisPage'
 import { OrgaoDashboardPage } from '@/pages/orgao/OrgaoDashboardPage'
 import { OrgaoEncontreiPage } from '@/pages/orgao/OrgaoEncontreiPage'
 import {
   OrgaoPendingPage,
   OrgaoRejectedPage,
 } from '@/pages/orgao/OrgaoPendingPage'
+import { FinderChatPage } from '@/pages/public/FinderChatPage'
 import { PetPublicPage } from '@/pages/public/PetPublicPage'
 import { PrivacyPolicyPage } from '@/pages/public/PrivacyPolicyPage'
 import { QrReadPage } from '@/pages/public/QrReadPage'
 import { RescueRegisterPage } from '@/pages/public/RescueRegisterPage'
+import { TutorChatPage } from '@/pages/tutor/TutorChatPage'
 import { TutorDashboardPage } from '@/pages/tutor/TutorDashboardPage'
 import { TutorMatchesPage } from '@/pages/tutor/TutorMatchesPage'
 import { TutorOcorrenciasPage } from '@/pages/tutor/TutorOcorrenciasPage'
+import { TutorPerfilMenuPage } from '@/pages/tutor/TutorPerfilMenuPage'
 import { TutorProfilePage } from '@/pages/tutor/TutorProfilePage'
 import { PetDetailPage } from '@/pages/tutor/PetDetailPage'
 import { PetEditPage } from '@/pages/tutor/PetEditPage'
@@ -33,6 +38,9 @@ import { LostOccurrencePage } from '@/pages/tutor/LostOccurrencePage'
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Chat finder em tela cheia (sem header público) */}
+      <Route path="pet/:payload/chat" element={<FinderChatPage />} />
+
       <Route element={<PublicLayout />}>
         <Route path="pet/:payload" element={<PetPublicPage />} />
         <Route path="qr/:payload" element={<QrReadPage />} />
@@ -47,9 +55,12 @@ export function AppRoutes() {
       <Route path="login" element={<LoginPage />} />
 
       <Route element={<ProtectedRoute allowedRoles={['tutor']} />}>
+        {/* Chat tutor em tela cheia (sem bottom nav / header do painel) */}
+        <Route path="tutor/chat" element={<TutorChatPage />} />
         <Route path="tutor" element={<AppLayout area="tutor" />}>
           <Route index element={<TutorDashboardPage />} />
-          <Route path="perfil" element={<TutorProfilePage />} />
+          <Route path="perfil" element={<TutorPerfilMenuPage />} />
+          <Route path="perfil/editar" element={<TutorProfilePage />} />
           <Route path="ocorrencias" element={<TutorOcorrenciasPage />} />
           <Route path="matches" element={<TutorMatchesPage />} />
           <Route path="pets/novo" element={<PetNewPage />} />
@@ -72,6 +83,8 @@ export function AppRoutes() {
         <Route path="orgao" element={<AppLayout area="orgao" />}>
           <Route index element={<OrgaoDashboardPage />} />
           <Route path="encontrei" element={<OrgaoEncontreiPage />} />
+          <Route path="animais" element={<OrgaoAnimaisPage />} />
+          <Route path="animais/novo" element={<OrgaoAnimalNovoPage />} />
         </Route>
       </Route>
 

@@ -1,4 +1,4 @@
-# Documentação — PetID
+# Documentação — MyPetID
 
 Plataforma de Reencontro de Animais Perdidos (**Modelo Híbrido:** tag única QR/NFC → `/pet/{payload}` + `/resgate` sem tag + matching).
 

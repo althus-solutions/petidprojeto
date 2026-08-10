@@ -3,10 +3,24 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 
-export function InstallAppCard() {
+interface InstallAppCardProps {
+  /** Versão mais enxuta para o dashboard */
+  compact?: boolean
+  /** Não renderiza se o app já estiver instalado (útil em Meus pets) */
+  hideWhenInstalled?: boolean
+}
+
+export function InstallAppCard({
+  compact = false,
+  hideWhenInstalled = false,
+}: InstallAppCardProps) {
   const { status, busy, canPrompt, promptInstall } = usePwaInstall()
   const [showHelp, setShowHelp] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  if (hideWhenInstalled && status === 'installed') {
+    return null
+  }
 
   async function handleDownload() {
     if (canPrompt) {
@@ -28,6 +42,48 @@ export function InstallAppCard() {
 
   const helpVisible = status !== 'installed' && (showHelp || !canPrompt)
 
+  if (compact && status !== 'installed') {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-[18px] border border-surface-border bg-white px-4 py-3.5 shadow-card">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-500">
+          <img
+            src="/pwa-192.png"
+            alt=""
+            className="h-full w-full object-cover"
+            width={44}
+            height={44}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-extrabold text-brand-dark">
+            Baixar o aplicativo
+          </p>
+          <p className="text-[12.5px] text-gray-500">
+            Instale na tela inicial do celular
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          disabled={busy}
+          onClick={() => void handleDownload()}
+        >
+          {busy ? 'Abrindo…' : 'Baixar app'}
+        </Button>
+        {helpVisible && (
+          <p className="w-full text-[12.5px] leading-relaxed text-gray-500">
+            {status === 'ios_manual'
+              ? 'No Safari: Compartilhar → Adicionar à Tela de Início.'
+              : status === 'android_manual'
+                ? 'No Chrome: menu ⋮ → Instalar app / Adicionar à tela inicial.'
+                : 'Abra no celular (Chrome ou Safari) para instalar.'}
+          </p>
+        )}
+      </div>
+    )
+  }
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex gap-4 border-b border-surface-border bg-gradient-to-br from-brand-50 to-white px-5 py-5 sm:px-6">
@@ -45,7 +101,7 @@ export function InstallAppCard() {
             Baixar o aplicativo
           </h2>
           <p className="mt-1 text-[13px] leading-snug text-gray-500">
-            Instale o PetID na tela inicial do celular — abre como app, sem loja
+            Instale o MyPetID na tela inicial do celular — abre como app, sem loja
             de aplicativos.
           </p>
         </div>
@@ -54,7 +110,7 @@ export function InstallAppCard() {
       <div className="space-y-3 px-5 py-5 sm:px-6">
         {status === 'installed' ? (
           <p className="rounded-[14px] border border-[#A6F4C5] bg-[#ECFDF3] px-4 py-3 text-[13.5px] font-semibold text-[#027A48]">
-            PetID já está instalado neste aparelho.
+            MyPetID já está instalado neste aparelho.
           </p>
         ) : (
           <>

@@ -53,11 +53,13 @@ castrado text check (sim|nao|nao_sei) null
 padrao_pelagem text check (curto|medio|longo|enrolado|sem_pelo) null
 peso numeric
 caracteristicas text
+microchip text null         -- único (case-insensitive) quando preenchido; migration 033
 foto_url text               -- capa = animal_fotos.ordem=1
 consentimento_fotos_em timestamptz null
 consentimento_fotos_contexto jsonb null
-qr_payload text unique  -- ID único da tag; URL pública = /pet/{qr_payload} (QR + NFC)
-                        -- IMUTÁVEL após insert (trigger migration 021)
+qr_payload text unique null -- gerado só após “Gerar QR/NFC” (035); URL = /pet/{qr_payload}
+                            -- IMUTÁVEL após definido (trigger 021/035)
+tag_status text             -- nao_solicitada | solicitada | registrada (035)
 created_at timestamptz default now()
 ```
 
@@ -132,10 +134,26 @@ descricao text
 porte_estimado text
 cor_estimada text
 raca_estimada text
+microchip text null  -- migration 033; resgate autenticado/órgão
 embedding vector(512)  -- gerado pelo Ollama, dimensão ajustar ao modelo escolhido
 status text check (in ('disponivel','em_analise','reencontrado','anonimizado')) default 'disponivel'
 created_at timestamptz default now()
 ```
+
+### `animais_organizacao` (inventário institucional — migration 033)
+```
+id uuid pk
+organizacao_id uuid references organizacoes(id)
+registrado_por_user_id uuid references auth.users null
+registro_resgate_id uuid references registros_resgate(id) null  -- se veio de "Encontrei"
+nome text null
+especie / raca / porte / cor / sexo / caracteristicas text null
+microchip text null  -- único (case-insensitive) quando preenchido
+foto_url text null   -- path no bucket resgates
+status text check (sob_cuidados|disponivel_adocao|devolvido|transferido|obito)
+created_at / updated_at timestamptz
+```
+RLS: membro da org CRUD na própria; **prefeitura aprovada** (e admin plataforma) SELECT em todas as orgs aprovadas. RPCs: `listar_animais_organizacao`, `criar_animal_organizacao`.
 
 ### `matches`
 ```

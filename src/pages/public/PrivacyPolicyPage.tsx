@@ -6,7 +6,7 @@ export function PrivacyPolicyPage() {
     <section className="mx-auto max-w-[720px] space-y-6 py-2">
       <div>
         <p className="text-[12.5px] font-bold uppercase tracking-wide text-brand-500">
-          PetID
+          MyPetID
         </p>
         <h1 className="mt-1 font-display text-[27px] font-extrabold text-brand-dark">
           Política de Privacidade

@@ -75,6 +75,9 @@ Pronto para uso na feira pet de 12–14 de agosto de 2026.
 - Entidade registra resgate sem tag via **Encontrei um animal** no painel (`/orgao`).
 - Painel com indicadores: nº de animais perdidos/resgatados por região/período.
 - Entidade pode registrar resgate diretamente, disparando o mesmo fluxo de matching do RF-06.
+- Inventário próprio em `/orgao/animais` (`animais_organizacao`) — resgates e cadastros manuais, com microchip opcional.
+- **Prefeitura** (`organizacoes.tipo = prefeitura`): mesma conta `orgao`, porém leitura consolidada do inventário de **todas** as organizações aprovadas (exceção documentada ao isolamento multi-tenant).
+- Pós-lançamento (backlog): pré-checagem de duplicidade avançada; gestão de rede de protetores/voluntários.
 
 ### RF-08 — Integração WhatsApp Oficial (a validar)
 - Pessoa que encontrou pode enviar foto diretamente pelo WhatsApp oficial da plataforma.

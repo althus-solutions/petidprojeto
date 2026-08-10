@@ -20,11 +20,11 @@
 | 1 | Schema do banco (Supabase) | — | ✅ concluído | 2026-07-06 |
 | 2 | Autenticação e perfis | — | ✅ concluído | 2026-07-06 |
 | 3 | Cadastro tutor/pets + QR Code | RF-01, RF-02 | ✅ **Híbrido** + perfil tutor (`/tutor/perfil`) | 2026-07-06 / 2026-07-24 / 2026-08-04 |
-| 4 | Página pública leitura QR | RF-03 | ✅ **Híbrido** (`/pet` + chat in-app + WhatsApp opcional) | 2026-07-07 / 2026-08-08 |
+| 4 | Página pública leitura QR | RF-03 | ✅ **Híbrido** (`/pet` + chat tela cheia + WhatsApp opcional) | 2026-07-07 / 2026-08-09 |
 | 5 | Ocorrência perdido + registro resgate | RF-04, RF-05 | ✅ **RF-04 enriquecida** (geocoding, raio, consent) | 2026-07-07 / 2026-08-08 |
 | 6 | Pipeline matching IA (n8n + Ollama) | RF-06 | ✅ concluído | 2026-07-08 |
 | 7 | Notificações multicanal | RF-03, RF-06 | ✅ concluído | 2026-07-08 |
-| 8 | Painel órgãos/ONGs | RF-07 | ✅ concluído | 2026-07-08 |
+| 8 | Painel órgãos/ONGs | RF-07 | ✅ + inventário org / visão prefeitura / microchip | 2026-07-08 / 2026-08-09 |
 | 9 | Job de retenção de dados | Art. 6 | ✅ concluído | 2026-07-08 |
 
 ### Fase Design System (UI — sem alterar lógica)
@@ -44,6 +44,35 @@
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
 
+### 2026-08-09 — Feature — Solicitar tag → gerar QR/NFC
+- **RF:** RF-02
+- **Entregas:** status `tag_status` (Sem tag / Tag solicitada / Tag registrada); preview flip da plaqueta; fluxo solicitar → gerar QR+NFC (pagamento futuro); badge na listagem/detalhe
+- **Arquivos:** `035_animal_tag_status.sql`, `TagPreview.tsx`, `TagSolicitacaoPanel.tsx`, `pets.ts`, `PetDetailPage.tsx`, `PetCard.tsx`, `PetNewPage.tsx`
+- **Ops:** aplicar `035` no SQL Editor
+- **Pendência:** etapa de pagamento entre solicitar e gerar
+
+### 2026-08-09 — UX — Aba Perfil no rodapé do tutor
+- **RF:** —
+- **Entregas:** ícone do header vira aba **Perfil** (com Meus pets / Ocorrências); hub com foto, nome e botões Editar Perfil / Baixar app / Sair; formulário em `/tutor/perfil/editar`
+- **Arquivos:** `AppLayout.tsx`, `TutorPerfilMenuPage.tsx`, `routes/index.tsx`, `TutorProfilePage.tsx`
+
+### 2026-08-09 — Feature — Chat Finder N + foto/áudio/ligar
+- **RF:** RF-03
+- **Entregas:** conversa titulada `Finder N` (não o nome do pet); subtítulo `Pet encontrado: {nome}`; envio de foto e áudio; pedido de ligação (tutor pode compartilhar telefone com `tel:`)
+- **Arquivos:** `034_chat_finder_rotulo_midia.sql`, `ChatScreen.tsx`, `src/lib/chat.ts`, `src/types/chat.ts`
+- **Ops:** aplicar `034` no SQL Editor (bucket `chat-midia` + colunas `finder_rotulo` / `mensagens.tipo`)
+
+### 2026-08-09 — Feature — Inventário órgão + microchip + visão prefeitura
+- **RF:** RF-01 / RF-07
+- **Entregas:**
+  - Campo `microchip` em pets do tutor e no resgate autenticado/órgão
+  - Tabela `animais_organizacao` + telas `/orgao/animais` e `/orgao/animais/novo`
+  - Resgate da org espelha no inventário; prefeitura lista inventário de todas as orgs aprovadas
+- **Arquivos:** `033_animais_organizacao_microchip.sql`, `orgao-animais.ts`, `OrgaoAnimaisPage.tsx`, `OrgaoAnimalNovoPage.tsx`, `pets.ts`, `RescueForm.tsx`, docs
+- **Decisões:** papel JWT continua `orgao`; diferenciação por `organizacoes.tipo` (prefeitura = leitura cross-tenant). Exceção ao Art. 3.1 (isolamento) documentada — só leitura consolidada, escrita permanece na própria org
+- **Ops:** aplicar `033` no SQL Editor
+- **Backlog:** pré-checagem de duplicidade avançada; rede de protetores/voluntários
+
 ### 2026-08-08 — UX — Ocorrências: pin com nome + sem CTA abrir
 - **RF:** RF-03 / RF-04
 - **Entregas:** removidos botões “Abrir ocorrência — {pet}”; pin verde mostra nome do pet (não “Aqui”); tipagem `declare` corrigida na `031` (reencontro remove ocorrência/pin do mapa e `/pet` volta a “não está perdido”)
@@ -55,10 +84,26 @@
 - **Entregas:** topo só logo + avatar; abas **Meus pets** / **Ocorrências** viram ícones na barra inferior; badge de alerta permanece em Ocorrências; chat FAB sobe acima da bottom nav; barras flutuantes com cantos `rounded-[22px]`
 - **Arquivos:** `AppLayout.tsx`, `ChatWidget.tsx`
 
+### 2026-08-09 — UX — Chat em tela cheia
+- **RF:** RF-03
+- **Entregas:** chat deixa de ser modal/FAB-panel; telas `/tutor/chat` e `/pet/:payload/chat`; FAB do tutor só navega; após confirmar resgate o finder vai ao chat; `ChatWidget` removido
+- **Arquivos:** `ChatScreen.tsx`, `TutorChatPage.tsx`, `FinderChatPage.tsx`, `ChatFabLink.tsx`, `routes/index.tsx`, `AppLayout.tsx`, `PetPublicPage.tsx`
+
+### 2026-08-09 — UX — Layout estático (sem zoom)
+- **RF:** —
+- **Entregas:** viewport `user-scalable=no` + `maximum-scale=1`; CSS `touch-action: manipulation` e `overscroll-behavior` para uso como app
+- **Arquivos:** `index.html`, `src/index.css`
+
+### 2026-08-09 — Brand — PetID → MyPetID
+- **RF:** —
+- **Entregas:** nome de marca MyPetID em UI, PWA manifest, login, logo, `/pet`, chat e push; migration `032` atualiza mensagem automática do chat
+- **Arquivos:** `PetIdLogo.tsx`, `AppLayout.tsx`, `vite.config.ts`, `index.html`, `032_rename_brand_mypetid.sql`, textos públicos
+- **Ops:** aplicar `032` no Supabase
+
 ### 2026-08-08 — Feature — Instalar app (PWA) em Meu perfil
 - **RF:** — (mobile / PWA)
-- **Entregas:** bloco **Baixar o aplicativo** em `/tutor/perfil` sempre visível (mesmo com perfil carregando); botão **Baixar aplicativo** sempre exibido + copiar link; prompt nativo quando disponível; instruções iOS/Android/desktop
-- **Arquivos:** `InstallAppCard.tsx`, `usePwaInstall.ts`, `pwa-install.ts`, `main.tsx`, `vite.config.ts`, `index.html`, `public/pwa-*.png`, `TutorProfilePage.tsx`
+- **Entregas:** item **Baixar app** no menu do avatar (Meu perfil / Baixar app / Sair); prompt nativo ou navega para `#baixar-app` no perfil; card completo em `/tutor/perfil`
+- **Arquivos:** `AppLayout.tsx`, `InstallAppCard.tsx`, `usePwaInstall.ts`, `TutorProfilePage.tsx`, `vite.config.ts`, `public/pwa-*.png`
 - **Decisões:** MVP mobile = PWA instalável (conforme `plan.md`); Capacitor/lojas fica como evolução pós-feira
 
 ### 2026-08-08 — UX — Card de ocorrência mobile (ações à direita)
@@ -685,6 +730,9 @@
 | QR co-branded (logo patrocinador) | RF-02 | QR genérico `/resgate` funciona; sem overlay de marca | Incluir no MVP da feira ou pós-lançamento? |
 | ~~Múltiplas fotos por pet~~ | RF-01 | ~~Apenas 1 foto~~ → `animal_fotos` 1–4 (018) | ✅ 2026-08-08 |
 | Monetização / assinatura | PRD §6 | Não implementado | Freemium antes da feira ou depois? |
+| Pré-checagem de duplicidade (org) | RF-07 | Microchip único básico (033); sem UI de sugestão pré-cadastro | Pós-lançamento |
+| Rede de protetores/voluntários | RF-07 | Não implementado | Pós-lançamento |
+| Separar rota `/prefeitura` | RF-07 | Mesmo `/orgao` com capacidades por `tipo` | Criar área dedicada se UX exigir |
 
 ## Correções UX em lote (ago/2026)
 
@@ -700,7 +748,7 @@
 ## Pendências operacionais (pós-migrations — feira ago/2026)
 
 1. **Deploy infra:** Edge `analyze-pet` + `send-push`; workflows n8n; webhook `notificacoes` → n8n; credenciais Z-API/Resend/VAPID.
-2. **Config produção:** `ai_provider.active_provider` fake → ollama; Turnstile chaves reais; definir **região de atuação** das orgs em `/admin/organizacoes`; **usuário admin** `fernandosilva.alvus+petidadmin@gmail.com` precisa de `role: admin` em `app_metadata` (ver changelog 2026-07-09 config admin); ~~aplicar migrations `013`–`016`~~ **014–016 aplicadas** (2026-08-04); aplicar `020`–`027` se ainda pendentes (chat, ocorrência enriquecida, endereços tutor/mapa, leitura com endereço)
+2. **Config produção:** `ai_provider.active_provider` fake → ollama; Turnstile chaves reais; definir **região de atuação** das orgs em `/admin/organizacoes`; **usuário admin** `fernandosilva.alvus+petidadmin@gmail.com` precisa de `role: admin` em `app_metadata` (ver changelog 2026-07-09 config admin); ~~aplicar migrations `013`–`016`~~ **014–016 aplicadas** (2026-08-04); aplicar `020`–`033` se ainda pendentes (chat, ocorrência, inventário órgão/microchip)
 3. **Validação staging:** dry-run retenção (`/admin/retencao`); smoke test resgate → match → notificação; testes automatizados (Art. 7.1).
 4. **LGPD:** fluxo de exclusão de conta (security.md §1) — não implementado.
 5. **Deploy frontend** Vercel + domínio.

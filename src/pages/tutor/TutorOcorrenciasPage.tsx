@@ -345,10 +345,10 @@ export function TutorOcorrenciasPage() {
                 <p className="mt-2 text-[12.5px] text-brand-600">
                   Cadastre seu endereço em{' '}
                   <Link
-                    to="/tutor/perfil"
+                    to="/tutor/perfil/editar"
                     className="font-semibold underline-offset-2 hover:underline"
                   >
-                    Meu perfil
+                    Editar perfil
                   </Link>{' '}
                   para ver o pin no mapa.
                 </p>

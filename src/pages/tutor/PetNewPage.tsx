@@ -42,7 +42,8 @@ export function PetNewPage() {
           Cadastrar pet
         </h1>
         <p className="mt-1.5 text-sm text-gray-500">
-          Preencha os dados do pet e adicione as fotos para gerar o QR Code.
+          Cadastre o pet com fotos. Em seguida você solicita a tag e gera o QR
+          Code + NFC.
         </p>
       </div>
 
@@ -54,7 +55,7 @@ export function PetNewPage() {
           <PetForm
             campos={campos}
             onSubmit={handleSubmit}
-            submitLabel="Cadastrar e gerar QR Code"
+            submitLabel="Cadastrar pet"
           />
         </Card>
       )}

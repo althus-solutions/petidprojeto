@@ -35,7 +35,7 @@ export function PetIdLogo({ subtitle, to = '/login' }: PetIdLogoProps) {
       <PetIdLogoMark size={subtitle ? 'sm' : 'md'} />
       <span className="flex flex-col leading-tight">
         <span className="font-display text-lg font-extrabold text-brand-dark">
-          PetID
+          MyPetID
         </span>
         {subtitle && (
           <span className="text-xs font-semibold text-gray-500">{subtitle}</span>

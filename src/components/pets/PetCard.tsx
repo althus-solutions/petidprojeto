@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { PawIcon } from '@/components/ui/PawIcon'
 import { getPetPhotoSignedUrl } from '@/lib/pets'
-import type { Animal } from '@/types/pet'
+import { labelTagStatus, type Animal } from '@/types/pet'
 
 interface PetCardProps {
   animal: Animal
@@ -40,7 +40,13 @@ export function PetCard({ animal }: PetCardProps) {
             'Sem detalhes'}
         </p>
         <div className="mt-2">
-          <Badge>QR ativo</Badge>
+          {(() => {
+            const tag = labelTagStatus(
+              animal.tag_status ??
+                (animal.qr_payload ? 'registrada' : 'nao_solicitada'),
+            )
+            return <Badge variant={tag.variant}>{tag.label}</Badge>
+          })()}
         </div>
         <p className="mt-1.5 text-[11.5px] text-gray-400">
           cadastrado em {new Date(animal.created_at).toLocaleDateString('pt-BR')}
