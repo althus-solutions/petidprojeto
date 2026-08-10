@@ -89,13 +89,25 @@ export async function getPetPhotoUrl(
   fotoPath: string | null,
 ): Promise<string | null> {
   if (!fotoPath) return null
+  const path = fotoPath.replace(/^\/+/, '').trim()
+  if (!path) return null
 
   const { data, error } = await supabase.storage
     .from('pets')
-    .createSignedUrl(fotoPath, 3600)
+    .createSignedUrl(path, 3600)
 
-  if (error) return null
-  return data.signedUrl
+  if (!error && data?.signedUrl) return data.signedUrl
+
+  // Retry sem querystring / espaços acidentais
+  const cleaned = decodeURIComponent(path).trim()
+  if (cleaned !== path) {
+    const retry = await supabase.storage
+      .from('pets')
+      .createSignedUrl(cleaned, 3600)
+    if (!retry.error && retry.data?.signedUrl) return retry.data.signedUrl
+  }
+
+  return null
 }
 
 /** Resolve paths da galeria pública (RPC + fallback capa). */
@@ -107,6 +119,20 @@ export async function getPetPhotoUrls(
   fotoPaths: string[],
 ): Promise<string[]> {
   const unique = [...new Set(fotoPaths.map((p) => p.trim()).filter(Boolean))]
+  if (unique.length === 0) return []
+
+  // Batch primeiro (menos round-trips); fallback individual se a API falhar
+  const { data: batch, error: batchError } = await supabase.storage
+    .from('pets')
+    .createSignedUrls(unique, 3600)
+
+  if (!batchError && batch?.length) {
+    const fromBatch = batch
+      .map((row) => row.signedUrl)
+      .filter((u): u is string => Boolean(u))
+    if (fromBatch.length > 0) return fromBatch
+  }
+
   const urls = await Promise.all(unique.map((path) => getPetPhotoUrl(path)))
   return urls.filter((u): u is string => Boolean(u))
 }

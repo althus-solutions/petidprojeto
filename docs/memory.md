@@ -44,6 +44,19 @@
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
 
+### 2026-08-10 — Fix/UX — Aviso “já existe ocorrência aberta” após criar
+- **RF:** RF-04
+- **Entregas:** após criar perda, redireciona para `/tutor/ocorrencias` (mapa) em vez de remountar a tela com o aviso amarelo; copy do aviso (quando reentra com ocorrência já aberta) mais clara
+- **Arquivos:** `LostOccurrencePage.tsx`
+- **Causa:** `onSuccess` atualizava a lista → `temAberta=true` → form de sucesso era desmontado e trocado pelo banner de bloqueio
+
+### 2026-08-10 — Fix/UX — Confirmar resgate: foto + modal de localização
+- **RF:** RF-03
+- **Entregas:** checkbox só de termos; modal pedindo GPS ao confirmar; GPS com fallback (alta→baixa precisão) só grava pin se coordenadas forem obtidas; após confirmar/recusar localização → registra leitura (notifica tutor + chat) e vai ao chat; reforço signed URL das fotos + migration `036` (sync capa + policy Storage)
+- **Arquivos:** `PetPublicPage.tsx`, `LocationConsentModal.tsx`, `geolocation.ts`, `qr-read.ts`, `036_pet_publico_fotos_e_capa.sql`
+- **Ops:** aplicar `036` (e `028` se ainda não) no SQL Editor
+- **Causa pin ausente:** checkbox de localização marcado, mas falha do GPS era engolida e o resgate ia sem coords
+
 ### 2026-08-09 — Feature — Solicitar tag → gerar QR/NFC
 - **RF:** RF-02
 - **Entregas:** status `tag_status` (Sem tag / Tag solicitada / Tag registrada); preview flip da plaqueta; fluxo solicitar → gerar QR+NFC (pagamento futuro); badge na listagem/detalhe

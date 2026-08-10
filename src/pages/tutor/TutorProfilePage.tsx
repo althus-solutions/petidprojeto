@@ -1,6 +1,4 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
-import { useLocation } from 'react-router-dom'
-import { InstallAppCard } from '@/components/pwa/InstallAppCard'
 import { TutorEnderecoFields } from '@/components/tutor/TutorEnderecoFields'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
 import { Button } from '@/components/ui/Button'
@@ -36,7 +34,6 @@ function toDraft(contato: TutorContato): ContatoDraft {
 
 export function TutorProfilePage() {
   const { user, refreshUser } = useAuth()
-  const location = useLocation()
   const formId = useId()
 
   const [nome, setNome] = useState('')
@@ -55,12 +52,6 @@ export function TutorProfilePage() {
       if (fotoPreview?.startsWith('blob:')) URL.revokeObjectURL(fotoPreview)
     }
   }, [fotoPreview])
-
-  useEffect(() => {
-    if (location.hash !== '#baixar-app') return
-    const el = document.getElementById('baixar-app')
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [location.hash])
 
   useEffect(() => {
     async function load() {
@@ -239,10 +230,6 @@ export function TutorProfilePage() {
         <p className="mt-1.5 text-sm text-gray-500">
           Atualize foto, dados, endereço (só no seu mapa) e telefones de contato.
         </p>
-      </div>
-
-      <div id="baixar-app" className="scroll-mt-24">
-        <InstallAppCard />
       </div>
 
       {loading && <p className="text-sm text-gray-500">Carregando perfil…</p>}

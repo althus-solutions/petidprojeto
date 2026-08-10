@@ -25,15 +25,16 @@ export function TutorPerfilMenuPage() {
   }, [user?.tutor?.foto_url])
 
   async function handleBaixarApp() {
-    if (pwaStatus === 'installed') {
-      setShowInstall(true)
-      return
-    }
-    if (canPrompt) {
-      const ok = await promptInstall()
-      if (ok) return
-    }
     setShowInstall(true)
+    if (pwaStatus !== 'installed' && canPrompt) {
+      await promptInstall()
+    }
+    window.requestAnimationFrame(() => {
+      document.getElementById('baixar-app')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
   }
 
   return (

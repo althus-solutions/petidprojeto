@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { LostOccurrenceForm } from '@/components/ocorrencias/LostOccurrenceForm'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
 import { ButtonLink } from '@/components/ui/Button'
@@ -12,6 +12,7 @@ import type { Animal } from '@/types/pet'
 
 export function LostOccurrencePage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [animal, setAnimal] = useState<Animal | null>(null)
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaPerdido[]>([])
@@ -79,20 +80,31 @@ export function LostOccurrencePage() {
 
         {temAberta ? (
           <div className="mt-4 space-y-3">
-            <div className="rounded-[14px] bg-[#FFF6DD] px-4 py-3 text-sm text-[#B7791F]">
-              Já existe uma ocorrência <strong>aberta</strong> para este pet.
-              Aguarde o reencontro ou encerre antes de abrir outra.
+            <div className="rounded-[14px] bg-brand-50 px-4 py-3.5 text-sm leading-relaxed text-brand-700">
+              <strong>{animal.nome}</strong> já está com uma ocorrência de perda{' '}
+              <strong>aberta</strong>. Acompanhe no mapa ou registre o
+              reencontro em Ocorrências quando o pet for encontrado.
             </div>
-            <ButtonLink to="/tutor/ocorrencias" variant="outline" size="sm">
-              Ver no mapa de ocorrências
-            </ButtonLink>
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink to="/tutor/ocorrencias" variant="primary" size="sm">
+                Ver no mapa de ocorrências
+              </ButtonLink>
+              <ButtonLink
+                to={`/tutor/pets/${animal.id}`}
+                variant="outline"
+                size="sm"
+              >
+                Voltar ao pet
+              </ButtonLink>
+            </div>
           </div>
         ) : (
           <div className="mt-6">
             <LostOccurrenceForm
               animal={animal}
               onSuccess={() => {
-                void listOcorrenciasByAnimal(animal.id).then(setOcorrencias)
+                // Vai ao mapa — evita trocar o sucesso pelo aviso de “já existe aberta”
+                navigate('/tutor/ocorrencias', { replace: true })
               }}
             />
           </div>

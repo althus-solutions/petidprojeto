@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  LocationConsentModal,
+  type LocationModalPhase,
+} from '@/components/public/LocationConsentModal'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { reverseGeocode } from '@/lib/geocode'
@@ -54,13 +58,15 @@ export function PetPublicPage() {
   const [pet, setPet] = useState<PetPublicoQr | null>(null)
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [photoWarning, setPhotoWarning] = useState<string | null>(null)
   const [config, setConfig] = useState<PaginaQrConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [aceitouTermos, setAceitouTermos] = useState(false)
+  const [locModalOpen, setLocModalOpen] = useState(false)
+  const [locPhase, setLocPhase] = useState<LocationModalPhase>('ask')
+  const [locError, setLocError] = useState<string | null>(null)
   const [comLocalizacao, setComLocalizacao] = useState(false)
   const [tutorNotificado, setTutorNotificado] = useState(false)
-  const [aceitouTermos, setAceitouTermos] = useState(false)
-  const [compartilharLocalizacao, setCompartilharLocalizacao] = useState(true)
   const [tutorTelefoneWhatsapp, setTutorTelefoneWhatsapp] = useState<
     string | null
   >(null)
@@ -71,6 +77,29 @@ export function PetPublicPage() {
     const base = `/pet/${encodeURIComponent(qrPayload)}/chat`
     return leitura ? `${base}?leitura=${encodeURIComponent(leitura)}` : base
   }
+
+  const loadPhotos = useCallback(async (petData: PetPublicoQr) => {
+    const paths = resolvePetFotoPaths(petData)
+    if (paths.length === 0) {
+      setPhotoUrls([])
+      setPhotoIndex(0)
+      setPhotoWarning(
+        petData.tem_foto
+          ? 'As fotos deste pet não puderam ser carregadas.'
+          : null,
+      )
+      return
+    }
+
+    const urls = await getPetPhotoUrls(paths)
+    setPhotoUrls(urls)
+    setPhotoIndex(0)
+    setPhotoWarning(
+      urls.length === 0
+        ? 'Foto cadastrada, mas o acesso à imagem falhou. Peça ao tutor para reenviar a foto ou aplique a migration 036.'
+        : null,
+    )
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -95,20 +124,9 @@ export function PetPublicPage() {
 
         setPet(petData)
         setConfig(pageConfig)
+        await loadPhotos(petData)
+        if (cancelled) return
 
-        const paths = resolvePetFotoPaths(petData)
-        if (paths.length > 0) {
-          const urls = await getPetPhotoUrls(paths)
-          if (!cancelled) {
-            setPhotoUrls(urls)
-            setPhotoIndex(0)
-          }
-        } else if (!cancelled) {
-          setPhotoUrls([])
-          setPhotoIndex(0)
-        }
-
-        // Resgate só quando há ocorrência de perda aberta
         setStep(petData.ocorrencia_aberta === true ? 'profile' : 'safe')
       } catch (err) {
         if (cancelled) return
@@ -125,77 +143,89 @@ export function PetPublicPage() {
     return () => {
       cancelled = true
     }
-  }, [qrPayload])
+  }, [loadPhotos, qrPayload])
 
-  const enviarConfirmacao = useCallback(
-    async (consentiuLocalizacao: boolean) => {
+  const finalizarResgate = useCallback(
+    async (opts: {
+      latitude?: number
+      longitude?: number
+      enderecoTexto?: string | null
+      comGps: boolean
+    }) => {
       if (!qrPayload || !config) return
       if (pet?.ocorrencia_aberta !== true) {
-        setError('Este animal não está perdido.')
+        setLocError('Este animal não está perdido.')
         return
       }
 
-      setSubmitting(true)
+      setLocPhase('submitting')
+      setLocError(null)
       setError(null)
 
       try {
-        let latitude: number | undefined
-        let longitude: number | undefined
-        let enderecoTexto: string | null = null
-        let usouLocalizacao = false
-
-        if (consentiuLocalizacao) {
-          try {
-            const position = await getGeolocation()
-            latitude = position.coords.latitude
-            longitude = position.coords.longitude
-            usouLocalizacao = true
-            try {
-              const rev = await reverseGeocode(latitude, longitude)
-              enderecoTexto = rev?.label ?? null
-            } catch {
-              enderecoTexto = null
-            }
-          } catch {
-            // Navegador negou GPS — confirma resgate sem localização
-            usouLocalizacao = false
-            latitude = undefined
-            longitude = undefined
-          }
-        }
-
         const resultado = await registrarLeituraQr({
           qrPayload,
-          consentimentoLocalizacao: usouLocalizacao,
-          latitude,
-          longitude,
-          enderecoTexto,
+          consentimentoLocalizacao: opts.comGps,
+          latitude: opts.comGps ? opts.latitude : undefined,
+          longitude: opts.comGps ? opts.longitude : undefined,
+          enderecoTexto: opts.comGps ? (opts.enderecoTexto ?? null) : null,
           versaoTermos: config.versao_termos_consentimento,
         })
 
-        setComLocalizacao(usouLocalizacao)
+        setComLocalizacao(Boolean(resultado.com_localizacao))
         setTutorNotificado(Boolean(resultado.notificado))
         setTutorTelefoneWhatsapp(resultado.tutor_telefone_whatsapp ?? null)
         setLeituraId(resultado.leitura_id ?? null)
-        setStep('done')
+        setLocModalOpen(false)
+
+        // Chat + ocorrência/notificação já disparam no backend ao registrar a leitura
         if (resultado.leitura_id && qrPayload) {
-          navigate(chatPath(resultado.leitura_id))
+          navigate(chatPath(resultado.leitura_id), { replace: true })
           return
         }
+        setStep('done')
       } catch (err) {
-        setError(
+        setLocError(
           mapQrErrorMessage(
             err instanceof Error
               ? err.message
               : 'Não foi possível notificar o tutor.',
           ),
         )
-      } finally {
-        setSubmitting(false)
+        setLocPhase('ask')
       }
     },
     [config, navigate, pet?.ocorrencia_aberta, qrPayload],
   )
+
+  async function handleShareLocation() {
+    setLocPhase('requesting')
+    setLocError(null)
+    try {
+      const position = await getGeolocation()
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      let enderecoTexto: string | null = null
+      try {
+        const rev = await reverseGeocode(latitude, longitude)
+        enderecoTexto = rev?.label ?? null
+      } catch {
+        enderecoTexto = null
+      }
+      await finalizarResgate({
+        latitude,
+        longitude,
+        enderecoTexto,
+        comGps: true,
+      })
+    } catch {
+      setLocPhase('denied')
+    }
+  }
+
+  async function handleSkipLocation() {
+    await finalizarResgate({ comGps: false })
+  }
 
   if (step === 'loading') {
     return (
@@ -366,7 +396,7 @@ export function PetPublicPage() {
           <div className="relative mx-auto w-full max-w-[340px]">
             {photoUrls.length > 0 ? (
               <>
-                <div className="overflow-hidden rounded-2xl border-[3px] border-white bg-gradient-to-b from-brand-50 to-brand-100/80 shadow-card aspect-[4/5]">
+                <div className="aspect-[4/5] overflow-hidden rounded-2xl border-[3px] border-white bg-gradient-to-b from-brand-50 to-brand-100/80 shadow-card">
                   <img
                     src={photoUrls[photoIndex] ?? photoUrls[0]}
                     alt={`${pet.nome} — foto ${photoIndex + 1}`}
@@ -407,34 +437,11 @@ export function PetPublicPage() {
                     <p className="mt-2 text-center text-[12px] font-semibold text-brand-600">
                       {photoIndex + 1} / {photoUrls.length}
                     </p>
-                    <div className="mt-2 flex justify-center gap-2 overflow-x-auto pb-0.5">
-                      {photoUrls.map((url, i) => (
-                        <button
-                          key={`thumb-${i}-${url.slice(-24)}`}
-                          type="button"
-                          aria-label={`Ver foto ${i + 1}`}
-                          aria-current={i === photoIndex}
-                          onClick={() => setPhotoIndex(i)}
-                          className={[
-                            'h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 bg-brand-50 transition-colors',
-                            i === photoIndex
-                              ? 'border-brand-500'
-                              : 'border-white/80 opacity-80 hover:opacity-100',
-                          ].join(' ')}
-                        >
-                          <img
-                            src={url}
-                            alt=""
-                            className="h-full w-full object-cover object-top"
-                          />
-                        </button>
-                      ))}
-                    </div>
                   </>
                 )}
               </>
             ) : (
-              <div className="mx-auto flex aspect-[4/5] w-full max-w-[340px] items-center justify-center rounded-2xl border-[3px] border-white bg-brand-100 text-brand-500 shadow-card">
+              <div className="mx-auto flex aspect-[4/5] w-full max-w-[340px] flex-col items-center justify-center gap-3 rounded-2xl border-[3px] border-white bg-brand-100 px-4 text-brand-500 shadow-card">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M12 14.5c-3.5 0-6.5 2.2-6.5 5.2 0 1.1.9 1.8 2 1.6 1.4-.3 2.9-.5 4.5-.5s3.1.2 4.5.5c1.1.2 2-.5 2-1.6 0-3-3-5.2-6.5-5.2z" />
                   <circle cx="6" cy="9" r="2.2" />
@@ -442,6 +449,11 @@ export function PetPublicPage() {
                   <circle cx="9.5" cy="5.5" r="2" />
                   <circle cx="14.5" cy="5.5" r="2" />
                 </svg>
+                {photoWarning && (
+                  <p className="text-[12px] font-semibold leading-relaxed text-brand-700">
+                    {photoWarning}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -462,9 +474,8 @@ export function PetPublicPage() {
                 {pet.tutor_nome ?? 'Tutor cadastrado na MyPetID'}
               </p>
               <p className="mt-1 text-[12px] text-gray-500">
-                Após confirmar o resgate, fale com o tutor pelo chat da MyPetID
-                (ícone no canto inferior). WhatsApp fica disponível se houver
-                telefone cadastrado.
+                Após confirmar o resgate, você fala com o tutor pelo chat da
+                MyPetID.
               </p>
             </div>
           )}
@@ -487,35 +498,19 @@ export function PetPublicPage() {
             {config.instrucao}
           </p>
 
-          <div className="space-y-2.5">
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] bg-brand-50 px-4 py-3.5">
-              <input
-                type="checkbox"
-                className="mt-0.5 accent-brand-500"
-                checked={aceitouTermos}
-                onChange={(e) => setAceitouTermos(e.target.checked)}
-                disabled={submitting}
-              />
-              <span className="text-[13px] leading-relaxed text-gray-700">
-                Aceito os termos e condições da MyPetID para confirmar este
-                resgate. *
-              </span>
-            </label>
-
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] border border-surface-border bg-[#fbfaff] px-4 py-3.5">
-              <input
-                type="checkbox"
-                className="mt-0.5 accent-brand-500"
-                checked={compartilharLocalizacao}
-                onChange={(e) => setCompartilharLocalizacao(e.target.checked)}
-                disabled={submitting}
-              />
-              <span className="text-[13px] leading-relaxed text-gray-700">
-                {config.texto_consentimento}{' '}
-                <span className="text-gray-400">(opcional, mas ajuda muito)</span>
-              </span>
-            </label>
-          </div>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-[14px] bg-brand-50 px-4 py-3.5">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-brand-500"
+              checked={aceitouTermos}
+              onChange={(e) => setAceitouTermos(e.target.checked)}
+              disabled={locModalOpen}
+            />
+            <span className="text-[13px] leading-relaxed text-gray-700">
+              Aceito os termos e condições da MyPetID para confirmar este
+              resgate. *
+            </span>
+          </label>
 
           {error && (
             <p className="rounded-[14px] bg-brand-50 px-4 py-3 text-sm text-brand-700">
@@ -527,37 +522,32 @@ export function PetPublicPage() {
             type="button"
             variant="primary"
             className="w-full py-[15px] text-[15px]"
-            disabled={!aceitouTermos || submitting}
-            onClick={() => void enviarConfirmacao(compartilharLocalizacao)}
+            disabled={!aceitouTermos || locModalOpen}
+            onClick={() => {
+              setLocError(null)
+              setLocPhase('ask')
+              setLocModalOpen(true)
+            }}
           >
-            {submitting ? 'Enviando…' : 'Confirmar Resgate'}
+            Confirmar Resgate
           </Button>
         </div>
       </Card>
 
-      {(pet.tem_tutor || pet.tutor_nome) && qrPayload && (
-        <div className="fixed bottom-5 right-5 z-[70]">
-          <ButtonLink
-            to={chatPath(leituraId)}
-            variant="primary"
-            className="!h-14 !w-14 !rounded-full !p-0 shadow-lg"
-            aria-label="Abrir chat com o tutor"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M21 15a3 3 0 01-3 3H8l-5 3V6a3 3 0 013-3h12a3 3 0 013 3z" />
-            </svg>
-          </ButtonLink>
-        </div>
+      {locModalOpen && (
+        <LocationConsentModal
+          petName={pet.nome}
+          phase={locPhase}
+          error={locError}
+          onShare={() => void handleShareLocation()}
+          onSkip={() => void handleSkipLocation()}
+          onClose={() => {
+            if (locPhase === 'requesting' || locPhase === 'submitting') return
+            setLocModalOpen(false)
+            setLocPhase('ask')
+            setLocError(null)
+          }}
+        />
       )}
     </section>
   )

@@ -6,7 +6,7 @@
 
 Permitir que um tutor cadastre seu animal com **identificação única** (QR + link NFC), e que o reencontro aconteça por **dois caminhos**:
 
-1. **Com tag** — leitura do QR/NFC abre a página pública do animal → Confirmar Resgate → consentimento de localização → notifica o tutor  
+1. **Com tag** — leitura do QR/NFC abre a página pública do animal → termos → Confirmar Resgate → modal de localização → notifica o tutor + chat  
 2. **Sem tag** — site `/resgate` → formulário + matching por IA → notifica o tutor se houver score suficiente  
 
 Pronto para uso na feira pet de 12–14 de agosto de 2026.
@@ -42,10 +42,11 @@ Pronto para uso na feira pet de 12–14 de agosto de 2026.
   - foto, nome e dados públicos do pet
   - indicação de que possui tutor + **nome completo do tutor**
   - no perfil: **não** exibir telefone, e-mail ou WhatsApp (contato direto só após confirmação)
-- Ação principal: botão **Confirmar Resgate**, habilitado somente após checkbox de aceite dos termos (incluindo compartilhamento de localização).
-- Ao confirmar, captura GPS, registra a leitura e vai à tela final (sem etapa intermediária de localização).
+- Ação principal: botão **Confirmar Resgate**, habilitado somente após checkbox de aceite dos **termos**.
+- Ao confirmar, abre **modal** pedindo localização (compartilhar ou continuar sem). GPS só grava pin se as coordenadas forem obtidas de fato.
+- Após a escolha no modal: registra a leitura, notifica o tutor (se ocorrência aberta), abre conversa no chat e navega o finder para `/pet/{payload}/chat`.
 - **Gatilho de notificação:** o tutor **só é notificado** (e o WhatsApp só é liberado) se existir ocorrência de perda com status **`aberta`**. Sem ocorrência aberta, a leitura ainda é gravada (auditoria), mas `notificado=false`.
-- Na tela final (quando notificado): CTA **Conversar diretamente com o tutor** (`wa.me` com telefone principal). Telefone não vem de `obter_pet_por_qr`.
+- WhatsApp (`wa.me` com telefone principal) permanece opcional na tela de confirmação/fallback. Telefone não vem de `obter_pet_por_qr`.
 - Rate limiting no endpoint público de registro da leitura.
 - Sem texto “animal sem coleira” nesta tela.
 

@@ -1,15 +1,31 @@
-export function getGeolocation(): Promise<GeolocationPosition> {
+function getPositionOnce(
+  options: PositionOptions,
+): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Seu navegador não suporta geolocalização.'))
       return
     }
-
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      // Alta precisão (GPS) — importante no resgate da tag para o tutor ir ao ponto certo
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 15_000,
-    })
+    navigator.geolocation.getCurrentPosition(resolve, reject, options)
   })
+}
+
+/**
+ * Obtém GPS com alta precisão e, se falhar/timeout, tenta novamente com
+ * precisão reduzida (mais estável em celular / HTTPS / PWA).
+ */
+export async function getGeolocation(): Promise<GeolocationPosition> {
+  try {
+    return await getPositionOnce({
+      enableHighAccuracy: true,
+      timeout: 18_000,
+      maximumAge: 10_000,
+    })
+  } catch {
+    return getPositionOnce({
+      enableHighAccuracy: false,
+      timeout: 20_000,
+      maximumAge: 60_000,
+    })
+  }
 }
