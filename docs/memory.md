@@ -50,6 +50,12 @@
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
 
+### 2026-08-12 — Ops — Seed ONG (50 cães) + fix Storage resgates
+- **RF:** RF-07
+- **Entregas:** script `seed-ong-demo.mjs` popula inventário da Ong Cão Sem Dono (~50 cães com foto); 25 resgates para o painel; migration `042` corrige RLS do bucket `resgates`; SQL ops `scripts/ong-ops-feira.sql` (região BH + fix Storage)
+- **Arquivos:** `scripts/seed-ong-demo.mjs`, `scripts/ong-ops-feira.sql`, `042_fix_resgates_org_storage_rls.sql`
+- **Validação:** 50 fotos anexadas; 25 resgates criados; indicadores do painel com resgates > 0
+
 ### 2026-08-12 — UX — Mapa de ocorrências com 3 pontos
 - **RF:** RF-04
 - **Entregas:** mapa em `/tutor/ocorrencias` com pins **Residência** (perfil), **Você agora** (GPS do aparelho, só cliente) e **Pet** (leitura QR/NFC); legenda + botão atualizar localização
