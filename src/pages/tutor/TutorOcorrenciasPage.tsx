@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { OcorrenciasMap } from '@/components/ocorrencias/OcorrenciasMap'
+import {
+  OcorrenciasMap,
+  type TutorLocalizacaoAtual,
+} from '@/components/ocorrencias/OcorrenciasMap'
 import { TutorBackLink } from '@/components/tutor/TutorBackLink'
 import { Badge } from '@/components/ui/Badge'
 import { Button, ButtonLink } from '@/components/ui/Button'
@@ -16,6 +19,7 @@ import {
   mapReencontroError,
   registrarReencontroTutor,
 } from '@/lib/ocorrencias'
+import { getGeolocation } from '@/lib/geolocation'
 import { getPetPhotoSignedUrl } from '@/lib/pets'
 import { getTutorEndereco } from '@/lib/tutor-enderecos'
 import type { OcorrenciaAbertaMapa } from '@/types/ocorrencia'
@@ -166,6 +170,13 @@ export function TutorOcorrenciasPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
+  const [tutorAtual, setTutorAtual] = useState<TutorLocalizacaoAtual | null>(
+    null,
+  )
+  const [gpsStatus, setGpsStatus] = useState<
+    'idle' | 'loading' | 'ok' | 'denied'
+  >('idle')
+  const [gpsError, setGpsError] = useState<string | null>(null)
 
   const alertaAtivo = useMemo(() => {
     if (alertaDismissed) return null
@@ -210,6 +221,31 @@ export function TutorOcorrenciasPage() {
     void load()
   }, [load])
 
+  const atualizarLocalizacaoAtual = useCallback(async () => {
+    setGpsStatus('loading')
+    setGpsError(null)
+    try {
+      const pos = await getGeolocation()
+      setTutorAtual({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      })
+      setGpsStatus('ok')
+    } catch (err) {
+      setTutorAtual(null)
+      setGpsStatus('denied')
+      setGpsError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível obter sua localização atual.',
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    void atualizarLocalizacaoAtual()
+  }, [atualizarLocalizacaoAtual])
+
   function dismissAlerta() {
     if (alertaAtivo) {
       dismissAlertaOcorrencia(alertaAtivo)
@@ -246,7 +282,10 @@ export function TutorOcorrenciasPage() {
     }
   }
 
-  const showMap = ocorrencias.length > 0 || Boolean(tutorEndereco)
+  const showMap =
+    ocorrencias.length > 0 ||
+    Boolean(tutorEndereco) ||
+    Boolean(tutorAtual)
 
   return (
     <section className="mx-auto max-w-[900px] space-y-6">
@@ -333,41 +372,6 @@ export function TutorOcorrenciasPage() {
             </div>
           )}
 
-          <Card className="overflow-hidden p-0 shadow-soft">
-            <div className="border-b border-surface-border px-5 py-3.5 sm:px-6">
-              <h2 className="font-display text-[15px] font-extrabold text-brand-dark">
-                Mapa ao vivo
-              </h2>
-              <p className="mt-0.5 text-[12.5px] text-gray-500">
-                Roxo = seu endereço · verde piscando = onde a tag foi lida
-              </p>
-              {!tutorEndereco && (
-                <p className="mt-2 text-[12.5px] text-brand-600">
-                  Cadastre seu endereço em{' '}
-                  <Link
-                    to="/tutor/perfil/editar"
-                    className="font-semibold underline-offset-2 hover:underline"
-                  >
-                    Editar perfil
-                  </Link>{' '}
-                  para ver o pin no mapa.
-                </p>
-              )}
-            </div>
-            {!showMap ? (
-              <div className="px-6 py-12 text-center text-sm text-gray-500">
-                Nenhuma ocorrência aberta. Abra uma pelo pet correspondente para
-                habilitar notificações da tag.
-              </div>
-            ) : (
-              <OcorrenciasMap
-                ocorrencias={ocorrencias}
-                selectedId={selectedId}
-                tutorEndereco={tutorEndereco}
-              />
-            )}
-          </Card>
-
           <div>
             <h2 className="mb-3 font-display text-base font-extrabold text-brand-dark">
               Ocorrências abertas
@@ -406,6 +410,82 @@ export function TutorOcorrenciasPage() {
               </div>
             )}
           </div>
+
+          <Card className="overflow-hidden p-0 shadow-soft">
+            {!showMap ? (
+              <div className="px-6 py-12 text-center text-sm text-gray-500">
+                Nenhuma ocorrência aberta. Abra uma pelo pet correspondente para
+                habilitar notificações da tag.
+              </div>
+            ) : (
+              <>
+                <OcorrenciasMap
+                  ocorrencias={ocorrencias}
+                  selectedId={selectedId}
+                  tutorEndereco={tutorEndereco}
+                  tutorAtual={tutorAtual}
+                />
+                <div className="space-y-2.5 border-t border-surface-border px-4 py-3 sm:px-5">
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-gray-600">
+                    <li className="inline-flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full bg-[#6c4fe0]"
+                        aria-hidden
+                      />
+                      Residência (perfil)
+                    </li>
+                    <li className="inline-flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full bg-[#0ea5e9]"
+                        aria-hidden
+                      />
+                      Você agora (GPS)
+                    </li>
+                    <li className="inline-flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full bg-[#12b76a]"
+                        aria-hidden
+                      />
+                      Pet (leitura QR/NFC)
+                    </li>
+                  </ul>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={gpsStatus === 'loading'}
+                      onClick={() => void atualizarLocalizacaoAtual()}
+                    >
+                      {gpsStatus === 'loading'
+                        ? 'Localizando…'
+                        : tutorAtual
+                          ? 'Atualizar minha localização'
+                          : 'Usar minha localização atual'}
+                    </Button>
+                    {gpsStatus === 'denied' && (
+                      <p className="text-[12px] text-gray-500">
+                        {gpsError ||
+                          'Permita o GPS no navegador para ver onde você está.'}
+                      </p>
+                    )}
+                    {!tutorEndereco && (
+                      <p className="text-[12px] text-brand-600">
+                        Cadastre a residência em{' '}
+                        <Link
+                          to="/tutor/perfil/editar"
+                          className="font-semibold underline-offset-2 hover:underline"
+                        >
+                          Editar perfil
+                        </Link>
+                        .
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
         </>
       )}
     </section>

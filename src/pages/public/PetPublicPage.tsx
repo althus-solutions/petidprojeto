@@ -96,7 +96,7 @@ export function PetPublicPage() {
     setPhotoIndex(0)
     setPhotoWarning(
       urls.length === 0
-        ? 'Foto cadastrada, mas o acesso à imagem falhou. Aplique a migration 037 no Supabase (SQL Editor).'
+        ? 'Foto cadastrada, mas o acesso à imagem falhou. No Supabase, rode a migration 041_storage_pet_foto_publica_reforco.sql (SQL Editor).'
         : null,
     )
   }, [])

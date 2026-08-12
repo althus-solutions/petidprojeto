@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Assets locais do seed de demo (feira)
+scripts/demo-assets/
+
 # Build
 dist/
 dev-dist/

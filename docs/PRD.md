@@ -95,6 +95,7 @@ Cada item do PRD original mapeia para um **RF-XX** em [`spec.md`](spec.md). Stat
 | 4.7 | RF-07 | Painel de órgãos/ONGs | ✅ Inventário `/orgao/animais` + visão prefeitura (033); configurar região das orgs |
 | 4.8 | RF-08 | Integração WhatsApp oficial | 🟡 Z-API via n8n (Prompt 7); templates Meta a validar |
 | 4.9 | RF-09 | Comunidade, recompensa, arte, plano saúde, hardware | 🚫 Fora do MVP |
+| 4.10 | RF-10 | Adoção tutor (parceria TeleCão) | ✅ Galeria + form + Tenho interesse (039) |
 
 ### 4.3. Acionamento por tag (QR/NFC) — Modelo Híbrido (oficial desde 24/jul/2026)
 

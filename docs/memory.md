@@ -40,9 +40,65 @@
 | DS-6 | Área do órgão | RF-07 | ✅ concluído (refino 2) | 2026-07-09 |
 | DS-7 | Área admin (+ MFA) | — | ✅ concluído (refino) | 2026-07-08 |
 
+### Parcerias / pós-MVP parcial
+
+| Item | Título | RF | Status | Concluído em |
+|------|--------|-----|--------|--------------|
+| AD-1 | Aba Adoção tutor (TeleCão) | RF-10 | ⏸ oculta na UI (código preservado) | 2026-08-10 / 2026-08-11 |
+
 ## Changelog de implementação
 
 > Entradas mais recentes no topo. O agente adiciona uma ao concluir cada prompt/entrega.
+
+### 2026-08-12 — UX — Mapa de ocorrências com 3 pontos
+- **RF:** RF-04
+- **Entregas:** mapa em `/tutor/ocorrencias` com pins **Residência** (perfil), **Você agora** (GPS do aparelho, só cliente) e **Pet** (leitura QR/NFC); legenda + botão atualizar localização
+- **Arquivos:** `OcorrenciasMap.tsx`, `TutorOcorrenciasPage.tsx`, `index.css`
+- **Decisões:** GPS atual não é persistido no banco (privado do tutor na sessão da tela)
+
+### 2026-08-12 — Ops — Seed 5 pets demo feira (fluxo completo)
+- **RF:** RF-01–RF-04 (demo)
+- **Entregas:** script `scripts/seed-demo-feira.mjs` cria/reusa 5 pets (Luna, Thor, Mel, Nina, Mimi) com foto Storage e tag QR/NFC; **sem ocorrência aberta** (tutor abre na hora do teste); encerra abertas residualmente no re-seed; valida signed URL anônima; endereço do tutor mantido
+- **Arquivos:** `scripts/seed-demo-feira.mjs`, `package.json` (`seed:demo-feira`), `.gitignore` (`scripts/demo-assets/`)
+- **Ops:** credenciais só via env (`DEMO_TUTOR_EMAIL` / `DEMO_TUTOR_PASSWORD`); URLs NFC usam `DEMO_APP_URL` (padrão localhost)
+- **Validação:** seed executado — RPC pública + `createSignedUrl` OK; `ocorrencia_aberta=false` nos 5
+
+### 2026-08-12 — UX — Cadastro de pet com uma única foto
+- **RF:** RF-01
+- **Entregas:** formulário de cadastro/edição passa a ter um único seletor de foto (`MAX_PET_FOTOS = 1`); textos e consentimento no singular
+- **Arquivos:** `src/types/pet.ts`, `PetForm.tsx`, `pets.ts`
+- **Decisões:** galeria multi-foto no cadastro descontinuada na UI; pets antigos com várias fotos mantêm a capa na edição (extras saem do banco ao salvar de novo)
+
+### 2026-08-12 — Fix — Foto na leitura NFC/QR (/pet)
+- **RF:** RF-03
+- **Entregas:** reforço da policy Storage para signed URL anônima — função com `row_security=off` + match por pasta `{tutor_id}/{animal_id}/*` quando o pet tem tag; logs de diagnóstico no front (DEV)
+- **Arquivos:** `041_storage_pet_foto_publica_reforco.sql`, `qr-read.ts`, `pets.ts`, `PetPublicPage.tsx`, `docs/database.md`
+- **Ops:** **aplicar `041` no SQL Editor do Supabase** (obrigatório; a `037` sozinha pode não bastar com FORCE RLS)
+- **Validação:** após aplicar 041, abrir `/pet/{payload}` anônimo e confirmar que a foto carrega
+
+### 2026-08-12 — Feature — Excluir pet no detalhe
+- **RF:** RF-01
+- **Entregas:** botão Excluir em `/tutor/pets/:id` com confirmação; `deleteAnimal` remove registro (RLS) e tenta limpar fotos no Storage; aviso se houver ocorrência aberta
+- **Arquivos:** `pets.ts`, `PetDetailPage.tsx`
+
+### 2026-08-11 — Feature — Cadastro do evento (tutor + parceiro)
+- **RF:** —
+- **Entregas:** formulário público `/evento` com dois públicos (tutor / ONG·prefeitura·clínica·negócio); campos detalhados + LGPD; gravação via RPC `registrar_cadastro_evento` na tabela `cadastros_evento`
+- **Arquivos:** `040_cadastros_evento.sql`, `src/types/evento.ts`, `src/lib/evento.ts`, `EventoHubPage.tsx`, `EventoTutorFormPage.tsx`, `EventoParceiroFormPage.tsx`, `routes/index.tsx`, `PublicLayout.tsx`
+- **Ops:** aplicar `040` no SQL Editor
+- **Validação:** pendente após migration
+
+### 2026-08-11 — Ops — Ocultar aba Adoção (TeleCão)
+- **RF:** RF-10
+- **Entregas:** remove item do bottom nav; `/tutor/adocao/*` redireciona para `/tutor`; páginas/libs de adoção mantidas para reativar depois
+- **Arquivos:** `AppLayout.tsx`, `routes/index.tsx`, `docs/memory.md`
+
+### 2026-08-10 — Feature — Aba Adoção (parceria TeleCão)
+- **RF:** RF-10 (novo — adoção tutor)
+- **Entregas:** aba **Adoção** no bottom nav; galeria + filtros laterais; formulário seções 1–8 (identidade TeleCão laranja); referência a pet existente ou cadastro novo; detalhe + **Tenho interesse** (RPC + notificação `interesse_adocao`); banner parceria
+- **Arquivos:** `039_adocao_telecao.sql`, `src/types/adocao.ts`, `src/lib/adocao.ts`, `src/components/adocao/*`, `TutorAdocao*.tsx`, `AppLayout.tsx`, `routes/index.tsx`, `public/parcerias/telecao-banner.png`, docs
+- **Ops:** aplicar `039` no SQL Editor do Supabase
+- **Decisões:** visual TeleCão só em `/tutor/adocao*`; interesse notifica responsável via fila `notificacoes`; órgãos/página pública fora deste corte
 
 ### 2026-08-10 — UX — Resgate: só checkbox de termos + modal de localização
 - **RF:** RF-03
@@ -727,6 +783,7 @@
 
 | Data | Decisão | Justificativa |
 |---|---|---|
+| 2026-08-10 | Adoção com identidade **TeleCão** (parceria) + fluxo **Tenho interesse** | Visual laranja só em `/tutor/adocao*`; notifica responsável via fila; pet existente pode ser referenciado |
 | 2026-07-06 | PWA responsiva em vez de app nativo no MVP | Prazo de 2 meses não comporta app nativo com qualidade; QR Code funciona via navegador |
 | 2026-07-06 | **Supabase como banco definitivo** (Postgres + Auth + Storage + Edge Functions) | Decisão explícita do time; não considerar alternativas de banco. PostGIS + pgvector + RLS nativos. Projeto: `sqwywmevqqlxadknwppu` |
 | 2026-07-06 | Schema inicial aplicado via `supabase/schema.sql` | 9 tabelas + RLS + configs seed; `spatial_ref_sys` (PostGIS) sem RLS é esperado |

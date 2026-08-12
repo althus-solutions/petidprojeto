@@ -16,6 +16,7 @@ export function PublicLayout() {
     pathname === '/cadastro' ||
     pathname === '/cadastro/tutor' ||
     pathname === '/cadastro/organizacao'
+  const isEvento = pathname.startsWith('/evento')
   const isLogin = pathname === '/login'
 
   return (
@@ -24,6 +25,13 @@ export function PublicLayout() {
         <div className="mx-auto flex h-[72px] max-w-[1080px] items-center justify-between px-4 sm:px-8">
           <PetIdLogo />
           <nav className="flex items-center gap-3.5 sm:gap-7">
+            <Link
+              to="/evento"
+              className={navLinkClass(isEvento)}
+              aria-current={isEvento ? 'page' : undefined}
+            >
+              evento
+            </Link>
             <Link
               to="/cadastro"
               className={navLinkClass(isCadastro)}

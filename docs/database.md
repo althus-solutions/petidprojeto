@@ -69,13 +69,15 @@ id uuid pk
 animal_id uuid references animais(id) on delete cascade
 storage_path text           -- bucket pets: {tutor_id}/{animal_id}/{ordem}.ext
 slot text check (corpo|lateral|rosto|marca|outro)
-ordem smallint 1..4 unique por animal
+ordem smallint 1..4 unique por animal  -- UI atual usa 1 foto (capa); trigger ainda permite até 4
 embedding vector(512)       -- por foto
 analise_visual jsonb
 ia_status text
 created_at timestamptz
 ```
-RLS: tutor só CRUD fotos dos próprios animais. Matching: Edge processa todas as fotos; embedding canônico (média) em `animais.embedding`.
+RLS: tutor só CRUD fotos dos próprios animais. Matching: Edge processa as fotos; embedding canônico em `animais.embedding`.
+
+**Leitura pública NFC/QR (bucket `pets`):** policy `pets_public_qr_select` chama `storage_object_is_pet_foto` (SECURITY DEFINER, `row_security=off` — migrations `037`/`041`). Permite `createSignedUrl` para `anon` nas fotos de pets com `qr_payload` (pasta `{tutor_id}/{animal_id}/*`). Sem isso, a página `/pet` carrega metadados via RPC mas a imagem não aparece.
 
 ### `organizacoes` (órgãos públicos / ONGs — multi-tenant desde o dia 1)
 ```
@@ -154,6 +156,55 @@ status text check (sob_cuidados|disponivel_adocao|devolvido|transferido|obito)
 created_at / updated_at timestamptz
 ```
 RLS: membro da org CRUD na própria; **prefeitura aprovada** (e admin plataforma) SELECT em todas as orgs aprovadas. RPCs: `listar_animais_organizacao`, `criar_animal_organizacao`.
+
+### `cadastros_evento` (feira / leads — migration 040)
+```
+id uuid pk
+tipo_publico text check (tutor|parceiro)
+nome, email, telefone, cidade, estado (UF)
+-- tutor: qtd_pets, especies_pets[], ja_conhece_mypetid, interesses_tutor[], como_soube
+-- parceiro: organizacao_nome, organizacao_tipo (ong|prefeitura|clinica_veterinaria|petshop|outro),
+--           cnpj, cargo, regiao_atuacao, volume_animais_mes, interesses_parceiro[], ja_usa_sistema
+aceita_contato boolean
+consentimento_lgpd_em + contexto jsonb
+origem, user_agent, created_at
+```
+RLS: insert anon/authenticated; select só `is_platform_admin()`.
+RPC: `registrar_cadastro_evento(p_dados jsonb)`.
+
+### `listagens_adocao` (parceria TeleCão — migration 039)
+```
+id uuid pk
+tutor_id uuid references tutores(id)          -- responsável / publicador
+animal_id uuid references animais(id) null    -- pet já cadastrado (opcional)
+nome, especie (cao|gato|outro), raca, sexo, idade_faixa, porte, peso_kg, cores[]
+campos saúde / temperamento / histórico / requisitos (ver migration 039)
+responsavel_nome, responsavel_contato, responsavel_tipo
+status text check (disponivel|em_processo|adotado)
+taxa_adocao_aplica boolean, taxa_adocao_valor numeric null
+termo_adocao_aceito_em / consentimento_lgpd_em (+ contexto jsonb)
+created_at / updated_at
+```
+RLS: tutores leem `disponivel|em_processo` (ou próprias); CRUD só do dono.
+RPC: `manifestar_interesse_adocao(listagem_id, mensagem)` → `interesses_adocao` + notificação.
+
+### `adocao_midia` (039)
+```
+id uuid pk
+listagem_id uuid references listagens_adocao(id)
+storage_path text   -- bucket pets: {tutor_id}/adocao/{listagem_id}/...
+tipo text check (foto|video)
+ordem int
+```
+
+### `interesses_adocao` (039)
+```
+id uuid pk
+listagem_id uuid
+tutor_interessado_id uuid
+mensagem text null
+unique (listagem_id, tutor_interessado_id)
+```
 
 ### `matches`
 ```

@@ -253,6 +253,10 @@ export function LoginPage() {
                 <Link to="/cadastro" className={authLinkClassName}>
                   Criar conta
                 </Link>
+                <span className="mx-2 text-gray-300">·</span>
+                <Link to="/evento" className={authLinkClassName}>
+                  Cadastro do evento
+                </Link>
               </p>
 
               {error && <FormError message={error} />}

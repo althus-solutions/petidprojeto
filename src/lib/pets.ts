@@ -1,3 +1,4 @@
+import { normalizeStoragePath } from '@/lib/qr-read'
 import { supabase } from '@/lib/supabase'
 import type {
   Animal,
@@ -79,6 +80,28 @@ export async function getAnimalById(animalId: string): Promise<Animal | null> {
   return data as Animal | null
 }
 
+/** Exclui o pet do tutor (RLS) e tenta limpar fotos no Storage. */
+export async function deleteAnimal(animalId: string): Promise<void> {
+  let fotoPaths: string[] = []
+  try {
+    const fotos = await listAnimalFotos(animalId)
+    fotoPaths = fotos.map((f) => f.storage_path).filter(Boolean)
+    const animal = await getAnimalById(animalId)
+    if (animal?.foto_url && !fotoPaths.includes(animal.foto_url)) {
+      fotoPaths.push(animal.foto_url)
+    }
+  } catch {
+    /* segue com delete do registro */
+  }
+
+  const { error } = await supabase.from('animais').delete().eq('id', animalId)
+  if (error) throw error
+
+  if (fotoPaths.length > 0) {
+    await supabase.storage.from(BUCKET_PETS).remove(fotoPaths)
+  }
+}
+
 export async function listAnimalFotos(animalId: string): Promise<AnimalFoto[]> {
   const { data, error } = await supabase
     .from('animal_fotos')
@@ -137,19 +160,24 @@ export async function animalToFormValues(
     storagePath: null,
   }))
 
-  for (let i = 0; i < Math.min(fotos.length, MAX_PET_FOTOS); i++) {
-    const foto = fotos[i]
-    const signed = await getPetPhotoSignedUrl(foto.storage_path)
-    slots[i] = {
-      slot: foto.slot || FOTO_SLOTS[i].slot,
+  // Preferência: capa (foto_url) → ordem 1 → primeira da lista
+  const capa =
+    (animal.foto_url
+      ? fotos.find((f) => f.storage_path === animal.foto_url)
+      : undefined) ??
+    fotos.find((f) => f.ordem === 1) ??
+    fotos[0]
+
+  if (capa && slots[0]) {
+    const signed = await getPetPhotoSignedUrl(capa.storage_path)
+    slots[0] = {
+      slot: capa.slot || FOTO_SLOTS[0].slot,
       file: null,
       previewUrl: signed,
-      storagePath: foto.storage_path,
+      storagePath: capa.storage_path,
     }
-  }
-
-  // Fallback capa legada sem linhas em animal_fotos
-  if (fotos.length === 0 && animal.foto_url) {
+  } else if (animal.foto_url && slots[0]) {
+    // Fallback capa legada sem linhas em animal_fotos
     const signed = await getPetPhotoSignedUrl(animal.foto_url)
     slots[0] = {
       slot: 'corpo',
@@ -459,9 +487,12 @@ export async function getPetPhotoSignedUrl(
   storagePath: string,
   expiresIn = 3600,
 ): Promise<string | null> {
+  const path = normalizeStoragePath(storagePath)
+  if (!path) return null
+
   const { data, error } = await supabase.storage
     .from(BUCKET_PETS)
-    .createSignedUrl(storagePath, expiresIn)
+    .createSignedUrl(path, expiresIn)
 
   if (error) return null
   return data.signedUrl

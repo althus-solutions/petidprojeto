@@ -208,83 +208,70 @@ export function PetForm({
   }
 
   function renderFotosBlock(campo: CampoFormularioPet) {
+    const slot = fotoSlots[0]
+    const hasFoto = slotTemFoto(slot)
+    const label = campo.label?.replace(/fotos?/i, 'Foto') || 'Foto do pet'
+
     return (
       <div key={campo.nome} className="space-y-3">
-        <div>
-          <span className="text-[13.5px] font-bold text-brand-dark">
-            {fieldLabel(campo.label || 'Fotos do pet', true)}
-          </span>
-          <p className="mt-1 text-[12.5px] text-gray-500">
-            Mínimo 1, máximo {MAX_PET_FOTOS}. JPG ou PNG, até{' '}
-            {MAX_PET_FOTO_BYTES / (1024 * 1024)}MB cada. Os rótulos são sugestões
-            de enquadramento.
-            {mode === 'edit'
-              ? ' Troque só as fotos que quiser alterar — o QR Code e o link da tag não mudam.'
-              : ''}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-[13.5px] font-bold text-brand-dark">
+              {fieldLabel(label, true)}
+            </span>
+            <p className="mt-1 text-[12.5px] text-gray-500">
+              JPG ou PNG, até {MAX_PET_FOTO_BYTES / (1024 * 1024)}MB.
+              {mode === 'edit'
+                ? ' Trocar a foto não altera o QR Code nem o link da tag.'
+                : ''}
+            </p>
+          </div>
+          {hasFoto && (
+            <button
+              type="button"
+              className="shrink-0 text-[12px] font-semibold text-gray-400 hover:text-red-600"
+              onClick={() => setFotoSlot(0, null)}
+            >
+              Remover
+            </button>
+          )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {FOTO_SLOTS.map((meta, index) => {
-            const slot = fotoSlots[index]
-            const hasFoto = slotTemFoto(slot)
-            return (
-              <div
-                key={meta.slot}
-                className="rounded-[14px] border border-dashed border-surface-border bg-[#fbfaff] p-3"
+        <div className="rounded-[16px] border border-dashed border-surface-border bg-[#fbfaff] p-4">
+          {slot?.previewUrl ? (
+            <img
+              src={slot.previewUrl}
+              alt="Foto do pet"
+              className="mb-3 mx-auto aspect-[4/5] max-h-64 w-full max-w-[240px] rounded-2xl bg-brand-50 object-contain"
+            />
+          ) : (
+            <div className="mb-3 mx-auto flex aspect-[4/5] max-h-64 w-full max-w-[240px] items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+              <svg
+                width="36"
+                height="36"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden
               >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[12.5px] font-bold text-brand-dark">
-                    {meta.label}
-                    {index === 0 ? ' *' : ''}
-                  </p>
-                  {hasFoto && (
-                    <button
-                      type="button"
-                      className="text-[11.5px] font-semibold text-gray-400 hover:text-red-600"
-                      onClick={() => setFotoSlot(index, null)}
-                    >
-                      Remover
-                    </button>
-                  )}
-                </div>
-                {slot?.previewUrl ? (
-                  <img
-                    src={slot.previewUrl}
-                    alt={meta.label}
-                    className="mb-2 h-28 w-full rounded-xl object-contain bg-brand-50"
-                  />
-                ) : (
-                  <div className="mb-2 flex h-28 items-center justify-center rounded-xl bg-brand-50 text-brand-500">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      aria-hidden
-                    >
-                      <rect x="3" y="5" width="18" height="14" rx="2" />
-                      <circle cx="12" cy="12" r="3.5" />
-                    </svg>
-                  </div>
-                )}
-                <label className="inline-flex cursor-pointer">
-                  <span className="rounded-full border-[1.5px] border-brand-500 bg-white px-3 py-1.5 text-[12px] font-bold text-brand-500 hover:bg-brand-50">
-                    {hasFoto ? 'Trocar' : 'Escolher'}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    className="sr-only"
-                    onChange={(e) =>
-                      setFotoSlot(index, e.target.files?.[0] ?? null)
-                    }
-                  />
-                </label>
-              </div>
-            )
-          })}
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="12" cy="12" r="3.5" />
+              </svg>
+            </div>
+          )}
+          <div className="flex justify-center">
+            <label className="inline-flex cursor-pointer">
+              <span className="rounded-full border-[1.5px] border-brand-500 bg-white px-4 py-2 text-[13px] font-bold text-brand-500 hover:bg-brand-50">
+                {hasFoto ? 'Trocar foto' : 'Escolher foto'}
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                className="sr-only"
+                onChange={(e) => setFotoSlot(0, e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
         </div>
       </div>
     )
@@ -454,8 +441,8 @@ export function PetForm({
       {renderFotosBlock(
         fotoCampo ?? {
           nome: 'fotos',
-          label: 'Fotos do pet',
-          tipo: 'fotos',
+          label: 'Foto do pet',
+          tipo: 'foto',
           obrigatorio: true,
         },
       )}
@@ -469,7 +456,7 @@ export function PetForm({
           onChange={(e) => setField('consentimento_fotos', e.target.checked)}
         />
         <span className="text-[13px] leading-relaxed text-gray-600">
-          Autorizo o uso da(s) foto(s) e características deste pet para fins de
+          Autorizo o uso da foto e características deste pet para fins de
           identificação e matching automático na plataforma, conforme a{' '}
           <Link
             to="/privacidade"

@@ -14,11 +14,20 @@ import { formatTutorEnderecoLinha } from '@/types/tutor-endereco'
 
 const DEFAULT_CENTER: [number, number] = [-23.5505, -46.6333]
 
+export type TutorLocalizacaoAtual = {
+  latitude: number
+  longitude: number
+}
+
 interface OcorrenciasMapProps {
   ocorrencias: OcorrenciaAbertaMapa[]
   selectedId?: string | null
   tutorEndereco?: TutorEndereco | null
+  /** GPS atual do tutor (só no cliente — privado). */
+  tutorAtual?: TutorLocalizacaoAtual | null
 }
+
+type PinKind = 'endereco' | 'atual' | 'found'
 
 function escapeHtml(value: string) {
   return value
@@ -28,12 +37,16 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;')
 }
 
-function pinIcon(kind: 'endereco' | 'found', label: string) {
+function pinIcon(kind: PinKind, label: string) {
   const cls =
     kind === 'endereco'
       ? 'petid-map-pin petid-map-pin--home'
-      : 'petid-map-pin petid-map-pin--found'
-  const raw = (label.trim() || (kind === 'found' ? 'Pet' : 'Você')).slice(0, 16)
+      : kind === 'atual'
+        ? 'petid-map-pin petid-map-pin--atual'
+        : 'petid-map-pin petid-map-pin--found'
+  const fallback =
+    kind === 'found' ? 'Pet' : kind === 'atual' ? 'Você' : 'Casa'
+  const raw = (label.trim() || fallback).slice(0, 16)
   const safe = escapeHtml(raw)
 
   return L.divIcon({
@@ -48,9 +61,11 @@ function pinIcon(kind: 'endereco' | 'found', label: string) {
 function FitBounds({
   ocorrencias,
   tutorEndereco,
+  tutorAtual,
 }: {
   ocorrencias: OcorrenciaAbertaMapa[]
   tutorEndereco?: TutorEndereco | null
+  tutorAtual?: TutorLocalizacaoAtual | null
 }) {
   const map = useMap()
 
@@ -63,6 +78,14 @@ function FitBounds({
       Number.isFinite(tutorEndereco.longitude)
     ) {
       points.push([tutorEndereco.latitude, tutorEndereco.longitude])
+    }
+
+    if (
+      tutorAtual &&
+      Number.isFinite(tutorAtual.latitude) &&
+      Number.isFinite(tutorAtual.longitude)
+    ) {
+      points.push([tutorAtual.latitude, tutorAtual.longitude])
     }
 
     for (const o of ocorrencias) {
@@ -84,7 +107,7 @@ function FitBounds({
       return
     }
     map.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 18 })
-  }, [map, ocorrencias, tutorEndereco])
+  }, [map, ocorrencias, tutorEndereco, tutorAtual])
 
   return null
 }
@@ -93,6 +116,7 @@ export function OcorrenciasMap({
   ocorrencias,
   selectedId,
   tutorEndereco,
+  tutorAtual,
 }: OcorrenciasMapProps) {
   const center = useMemo((): [number, number] => {
     const found = ocorrencias.find(
@@ -104,17 +128,20 @@ export function OcorrenciasMap({
     if (found) {
       return [found.ultima_leitura_lat!, found.ultima_leitura_lng!]
     }
+    if (tutorAtual) {
+      return [tutorAtual.latitude, tutorAtual.longitude]
+    }
     if (tutorEndereco) {
       return [tutorEndereco.latitude, tutorEndereco.longitude]
     }
     return DEFAULT_CENTER
-  }, [ocorrencias, tutorEndereco])
+  }, [ocorrencias, tutorEndereco, tutorAtual])
 
   return (
     <MapContainer
       center={center}
       zoom={17}
-      className="petid-map h-[300px] w-full z-0 sm:h-[380px]"
+      className="petid-map z-0 h-[420px] w-full sm:h-[520px]"
       scrollWheelZoom
       zoomControl
     >
@@ -123,23 +150,49 @@ export function OcorrenciasMap({
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         subdomains="abcd"
       />
-      <FitBounds ocorrencias={ocorrencias} tutorEndereco={tutorEndereco} />
+      <FitBounds
+        ocorrencias={ocorrencias}
+        tutorEndereco={tutorEndereco}
+        tutorAtual={tutorAtual}
+      />
 
       {tutorEndereco &&
         Number.isFinite(tutorEndereco.latitude) &&
         Number.isFinite(tutorEndereco.longitude) && (
           <Marker
             position={[tutorEndereco.latitude, tutorEndereco.longitude]}
-            icon={pinIcon('endereco', 'Você')}
+            icon={pinIcon('endereco', 'Casa')}
             zIndexOffset={200}
           >
             <Popup>
-              <strong>Seu endereço</strong>
+              <strong>Residência</strong>
               <br />
               {formatTutorEnderecoLinha(tutorEndereco)}
               <br />
               <span style={{ color: '#6b7280', fontSize: 12 }}>
-                Privado — só você vê no app.
+                Endereço do perfil — só você vê no app.
+              </span>
+            </Popup>
+          </Marker>
+        )}
+
+      {tutorAtual &&
+        Number.isFinite(tutorAtual.latitude) &&
+        Number.isFinite(tutorAtual.longitude) && (
+          <Marker
+            position={[tutorAtual.latitude, tutorAtual.longitude]}
+            icon={pinIcon('atual', 'Você')}
+            zIndexOffset={300}
+          >
+            <Popup>
+              <strong>Sua localização atual</strong>
+              <br />
+              <span style={{ fontSize: 12 }}>
+                Onde você está agora (GPS deste aparelho).
+              </span>
+              <br />
+              <span style={{ color: '#6b7280', fontSize: 12 }}>
+                Privado — não é compartilhado com quem leu a tag.
               </span>
             </Popup>
           </Marker>
@@ -163,7 +216,7 @@ export function OcorrenciasMap({
             <Popup>
               <strong>{o.animal_nome}</strong>
               <br />
-              <span style={{ fontSize: 12 }}>Lido na tag</span>
+              <span style={{ fontSize: 12 }}>Lido na tag (QR/NFC)</span>
               <br />
               {o.ultima_leitura_endereco ? (
                 <>

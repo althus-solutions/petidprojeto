@@ -25,7 +25,7 @@ Pronto para uso na feira pet de 12–14 de agosto de 2026.
 
 ### RF-01 — Cadastro de tutor e pets
 - **Dado que** um visitante cria conta como tutor, **quando** preenche dados de contato, **então** o sistema cria o perfil e libera cadastro de pets.
-- Tutor pode cadastrar múltiplos pets ("Packs"), cada um com: nome, espécie, sexo, idade (opcional), castrado (opcional), raça, porte, cores (multi-select), padrão de pelagem, peso, características, **1–4 fotos** (`animal_fotos`) e consentimento LGPD registrado (`consentimento_fotos_em`).
+- Tutor pode cadastrar múltiplos pets ("Packs"), cada um com: nome, espécie, sexo, idade (opcional), castrado (opcional), raça, porte, cores (multi-select), padrão de pelagem, peso, características, **1 foto** (`animal_fotos` / capa) e consentimento LGPD registrado (`consentimento_fotos_em`).
 - Campos do formulário de pet devem ser configuráveis por um painel de administração (sem deploy de código para adicionar campo novo).
 - **Perfil do tutor** (`/tutor/perfil`, separado do cadastro de pet): editar nome, canal preferido de notificação e **múltiplos telefones**; marcar exatamente um como **principal** (notificações WhatsApp e CTA pós-resgate na tag).
 
@@ -91,6 +91,14 @@ Pronto para uso na feira pet de 12–14 de agosto de 2026.
 - Geração automática de arte de divulgação.
 - Integração com planos de saúde pet.
 - Coleira eletrônica / hardware avançado.
+
+### RF-10 — Adoção (parceria TeleCão) — tutor autenticado
+- Aba **Adoção** no painel do tutor (`/tutor/adocao`): galeria de animais disponíveis + filtros laterais.
+- Tutor pode **cadastrar** animal para adoção (formulário completo) ou **referenciar pet já cadastrado** (`animal_id`).
+- Identidade visual da parceria **TeleCão** (laranja) apenas nesta área; restante do app permanece MyPetID.
+- Detalhe do anúncio com botão **Tenho interesse** → registra interesse e notifica o responsável (`interesse_adocao` na fila de notificações).
+- Consentimentos LGPD / termo de adoção com timestamp + contexto JSONB.
+- Fora deste RF (backlog): listagem pública sem login, painel órgão, moderação admin, chat dedicado de adoção.
 
 ## 4. Requisitos não-funcionais (resumo — detalhe em `constitution.md` e `security.md`)
 

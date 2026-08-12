@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seed:demo-feira": "node scripts/seed-demo-feira.mjs"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.5.3",

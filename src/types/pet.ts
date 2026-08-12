@@ -33,11 +33,9 @@ export type PadraoPelagem =
 export type IdadeUnidade = 'meses' | 'anos'
 export type FotoSlot = 'corpo' | 'lateral' | 'rosto' | 'marca' | 'outro'
 
+/** Um único slot de foto no cadastro/edição do pet. */
 export const FOTO_SLOTS: { slot: FotoSlot; label: string }[] = [
-  { slot: 'corpo', label: 'Corpo inteiro' },
-  { slot: 'lateral', label: 'Lateral' },
-  { slot: 'rosto', label: 'Rosto' },
-  { slot: 'marca', label: 'Marca distintiva' },
+  { slot: 'corpo', label: 'Foto do pet' },
 ]
 
 export const CORES_PADRAO = [
@@ -143,7 +141,7 @@ export const COLUNAS_ANIMAIS = [
 export type ColunaAnimal = (typeof COLUNAS_ANIMAIS)[number]
 
 export const CONSENTIMENTO_FOTOS_TEXTO =
-  'Autorizo o uso da(s) foto(s) e características deste pet para fins de identificação e matching automático na plataforma, conforme a Política de Privacidade.'
+  'Autorizo o uso da foto e características deste pet para fins de identificação e matching automático na plataforma, conforme a Política de Privacidade.'
 
-export const MAX_PET_FOTOS = 4
+export const MAX_PET_FOTOS = 1
 export const MAX_PET_FOTO_BYTES = 5 * 1024 * 1024

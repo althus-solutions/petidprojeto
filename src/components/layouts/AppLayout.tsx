@@ -35,6 +35,7 @@ const tutorBottomNav = [
     end: false,
     icon: MapPinIcon,
   },
+  // Adoção (TeleCão) oculta — reativar com rotas em routes/index.tsx
   {
     to: '/tutor/perfil',
     label: 'Perfil',

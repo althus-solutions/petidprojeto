@@ -19,7 +19,18 @@ export default {
         surface: {
           border: '#E7E2F9',
         },
+        telecao: {
+          50: '#FFF4EB',
+          100: '#FFE4CC',
+          200: '#FFC899',
+          500: '#F36C00',
+          600: '#E05F00',
+          700: '#C25100',
+          dark: '#1F1F1F',
+          muted: '#6B7280',
+        },
       },
+
       fontFamily: {
         sans: ['Manrope', 'system-ui', 'sans-serif'],
         display: ['Sora', 'system-ui', 'sans-serif'],

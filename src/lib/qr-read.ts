@@ -124,6 +124,10 @@ export async function getPetPhotoUrl(
 
   if (!error && data?.signedUrl) return data.signedUrl
 
+  if (import.meta.env.DEV && error) {
+    console.warn('[pet-foto] createSignedUrl falhou', { path, error })
+  }
+
   return null
 }
 
@@ -149,11 +153,27 @@ export async function getPetPhotoUrls(
     .from('pets')
     .createSignedUrls(unique, 3600)
 
+  if (import.meta.env.DEV && batchError) {
+    console.warn('[pet-foto] createSignedUrls falhou', { unique, batchError })
+  }
+
   if (!batchError && batch?.length) {
     const fromBatch = batch
       .map((row) => row.signedUrl)
       .filter((u): u is string => Boolean(u))
     if (fromBatch.length > 0) return fromBatch
+
+    if (import.meta.env.DEV) {
+      const falhas = batch
+        .filter((row) => !row.signedUrl)
+        .map((row) => ({ path: row.path, error: row.error }))
+      if (falhas.length > 0) {
+        console.warn(
+          '[pet-foto] signed URLs vazias — aplique migration 041 no Supabase',
+          falhas,
+        )
+      }
+    }
   }
 
   const urls = await Promise.all(unique.map((path) => getPetPhotoUrl(path)))

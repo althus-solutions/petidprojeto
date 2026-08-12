@@ -24,6 +24,9 @@ import { PetPublicPage } from '@/pages/public/PetPublicPage'
 import { PrivacyPolicyPage } from '@/pages/public/PrivacyPolicyPage'
 import { QrReadPage } from '@/pages/public/QrReadPage'
 import { RescueRegisterPage } from '@/pages/public/RescueRegisterPage'
+import { EventoHubPage } from '@/pages/public/EventoHubPage'
+import { EventoTutorFormPage } from '@/pages/public/EventoTutorFormPage'
+import { EventoParceiroFormPage } from '@/pages/public/EventoParceiroFormPage'
 import { TutorChatPage } from '@/pages/tutor/TutorChatPage'
 import { TutorDashboardPage } from '@/pages/tutor/TutorDashboardPage'
 import { TutorMatchesPage } from '@/pages/tutor/TutorMatchesPage'
@@ -46,6 +49,9 @@ export function AppRoutes() {
         <Route path="qr/:payload" element={<QrReadPage />} />
         <Route path="resgate" element={<RescueRegisterPage />} />
         <Route path="privacidade" element={<PrivacyPolicyPage />} />
+        <Route path="evento" element={<EventoHubPage />} />
+        <Route path="evento/tutor" element={<EventoTutorFormPage />} />
+        <Route path="evento/parceiro" element={<EventoParceiroFormPage />} />
         <Route path="cadastro" element={<RegisterHubPage />} />
         <Route path="cadastro/tutor" element={<RegisterTutorPage />} />
         <Route path="cadastro/organizacao" element={<RegisterOrgaoPage />} />
@@ -62,6 +68,8 @@ export function AppRoutes() {
           <Route path="perfil" element={<TutorPerfilMenuPage />} />
           <Route path="perfil/editar" element={<TutorProfilePage />} />
           <Route path="ocorrencias" element={<TutorOcorrenciasPage />} />
+          {/* Adoção TeleCão oculta — código em pages/tutor/TutorAdocao* e components/adocao */}
+          <Route path="adocao/*" element={<Navigate to="/tutor" replace />} />
           <Route path="matches" element={<TutorMatchesPage />} />
           <Route path="pets/novo" element={<PetNewPage />} />
           <Route path="pets/:id" element={<PetDetailPage />} />

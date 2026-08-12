@@ -85,6 +85,15 @@ h6 {
   background: #2d1b69;
 }
 
+/* Localização atual do tutor (GPS no aparelho) */
+.petid-map-pin--atual .petid-map-pin__dot {
+  background: #0ea5e9;
+}
+
+.petid-map-pin--atual .petid-map-pin__label {
+  background: #0369a1;
+}
+
 .petid-map-pin--work .petid-map-pin__dot {
   background: #0ea5e9;
 }
