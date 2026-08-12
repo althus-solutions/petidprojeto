@@ -29,13 +29,14 @@ export function TutorAdocaoDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    const listagemId = id
     let cancelled = false
 
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const data = await getListagemAdocao(id)
+        const data = await getListagemAdocao(listagemId)
         if (cancelled) return
         if (!data) {
           setError('Anúncio não encontrado')
@@ -43,7 +44,7 @@ export function TutorAdocaoDetailPage() {
         }
         setItem(data)
 
-        const midia = data.midia ?? (await listAdocaoMidia(id))
+        const midia = data.midia ?? (await listAdocaoMidia(listagemId))
         const urls = (
           await Promise.all(
             midia
@@ -54,7 +55,7 @@ export function TutorAdocaoDetailPage() {
         if (!cancelled) setPhotos(urls)
 
         if (user?.tutor?.id) {
-          const ja = await jaManifestouInteresse(id, user.tutor.id)
+          const ja = await jaManifestouInteresse(listagemId, user.tutor.id)
           if (!cancelled) setJaInteressado(ja)
         }
       } catch (err) {
